@@ -1,0 +1,2895 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PVUNL Project Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+
+body{
+    font-family:Segoe UI,Arial,sans-serif;
+    background:#f4f7fb;
+    margin:20px;
+}
+
+h1{
+    text-align:center;
+    color:#005a9c;
+}
+
+.subtitle{
+    text-align:center;
+    color:#666;
+    margin-bottom:10px;
+}
+
+#fileStatus{
+    text-align:center;
+    color:#666;
+    font-size:13px;
+    margin-bottom:25px;
+}
+
+.dashboard-links{
+    text-align:center;
+    margin-top:10px;
+}
+
+.dashboard-links a{
+    color:#0078D4;
+    font-size:12px;
+    text-decoration:none;
+    margin:0 10px;
+}
+
+.dashboard-links a:hover{
+    text-decoration:underline;
+}
+
+.kpi-container{
+    display:flex;
+    gap:20px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.kpi-card{
+    background:white;
+    width:260px;
+    padding:20px;
+    border-radius:16px;
+    text-align:center;
+    border-top:6px solid #0078D4;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+    position:relative;
+    cursor:pointer;
+}
+
+.kpi-card h2{
+    margin:0;
+    color:#005a9c;
+}
+
+.kpi-value{
+    margin-top:10px;
+    color:#0078D4;
+    font-size:42px;
+    font-weight:bold;
+}
+
+.kpi-tooltip{
+    display:none;
+    position:fixed;
+    background:#005a9c;
+    color:white;
+    padding:12px 16px;
+    border-radius:8px;
+    font-size:12px;
+    max-width:300px;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    z-index:1000;
+    pointer-events:none;
+}
+
+.kpi-tooltip table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.kpi-tooltip th{
+    background:rgba(255,255,255,.15);
+    color:white;
+    padding:4px 6px;
+    font-size:11px;
+    text-align:left;
+}
+
+.kpi-tooltip td{
+    padding:4px 6px;
+    border:none;
+    border-bottom:1px solid rgba(255,255,255,.2);
+    font-size:11px;
+    color:white;
+}
+
+.section{
+    background:white;
+    margin-top:25px;
+    padding:20px;
+    border-radius:16px;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+}
+
+.section h2{
+    color:#005a9c;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th{
+    background:#005a9c;
+    color:white;
+    padding:10px;
+}
+
+td{
+    border:1px solid #ddd;
+    padding:10px;
+}
+
+.total-row{
+    background:#edf5ff;
+    font-weight:bold;
+}
+
+.shortfall{
+    color:red;
+    font-weight:bold;
+}
+
+canvas{
+    max-height:450px;
+}
+
+.split-row-50{
+    display:flex;
+    gap:20px;
+    margin-top:25px;
+    width: 100%;
+    box-sizing: border-box;
+    flex-wrap:wrap;
+}
+
+.half-col {
+    flex: 1 1 calc(50% - 10px);
+    max-width: calc(50% - 10px);
+    box-sizing: border-box;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    min-width: 320px;
+}
+
+.half-col h2{
+    color:#005a9c;
+    margin-top:0;
+}
+
+.pdf-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+}
+
+.pdf-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px;
+    border-bottom:1px solid #eee;
+}
+
+.pdf-item:last-child{
+    border-bottom:none;
+}
+
+.pdf-name{
+    color:#005a9c;
+    text-decoration:none;
+    font-weight:600;
+}
+
+.pdf-name:hover{
+    text-decoration:underline;
+}
+
+.pdf-date{
+    color:#888;
+    font-size:12px;
+}
+
+.empty-msg{
+    color:#999;
+    text-align:center;
+    padding:20px;
+}
+
+.comm-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+}
+
+.comm-tab{
+    background:#f4f7fb;
+    color:#005a9c;
+    border:1px solid #d0dceb;
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+}
+
+.comm-tab.active{
+    background:#0078D4;
+    color:white;
+    border-color:#0078D4;
+}
+
+.comm-tab:hover{
+    background:#005a9c;
+    color:white;
+}
+
+.comm-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.comm-nav-btn {
+    background: #0078D4;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.comm-nav-btn:hover:not(:disabled) {
+    background: #005a9c;
+}
+
+.comm-nav-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.comm-page-info {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+}
+
+.fin-card{
+    background:white;
+    padding:20px;
+    border-radius:16px;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+}
+
+.fin-card h2{
+    color:#005a9c;
+    margin-top:0;
+    text-align:center;
+}
+
+.fin-container{
+    display:flex;
+    gap:20px;
+    justify-content:center;
+    flex-wrap:wrap;
+}
+
+.fin-item{
+    flex:1;
+    min-width:140px;
+    text-align:center;
+    padding:15px;
+    border-radius:12px;
+    background:#f4f7fb;
+    border-top:6px solid #0078D4;
+}
+
+.fin-item.revised{
+    border-top-color:#ff6600;
+}
+
+.fin-item.accrual{
+    border-top-color:#28a745;
+}
+
+.fin-label{
+    color:#666;
+    font-size:14px;
+    margin-bottom:6px;
+}
+
+.fin-value{
+    color:#005a9c;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.capex-chart-wrap{
+    margin-top:18px;
+    padding-top:14px;
+    border-top:1px solid #eee;
+}
+
+.capex-chart-wrap h4{
+    color:#005a9c;
+    font-size:13px;
+    margin:0 0 10px 0;
+    text-align:center;
+}
+
+#capexChart{
+    max-height:110px !important;
+}
+
+.target-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+}
+
+.target-item{
+    display:flex;
+    gap:10px;
+    padding:8px 0;
+    border-bottom:1px solid #eee;
+    font-size:14px;
+    color:#333;
+}
+
+.target-item:last-child{
+    border-bottom:none;
+}
+
+.target-num{
+    background:#0078D4;
+    color:white;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    font-weight:bold;
+    flex-shrink:0;
+}
+
+.chart-row{
+    display:flex;
+    gap:20px;
+    margin-top:25px;
+    flex-wrap:wrap;
+}
+
+.chart-col{
+    flex:1;
+    min-width:320px;
+    background:white;
+    padding:20px;
+    border-radius:16px;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+}
+
+.chart-col h2{
+    color:#005a9c;
+    margin-top:0;
+}
+
+.update-tiles{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.update-tile{
+    background:#f4f7fb;
+    border-radius:12px;
+    padding:14px;
+    border-left:6px solid #0078D4;
+}
+
+.update-tile.boiler{
+    border-left-color:#ff6600;
+}
+
+.update-tile.pcp{
+    border-left-color:#28a745;
+}
+
+.update-tile-title{
+    font-weight:bold;
+    color:#005a9c;
+    font-size:14px;
+    margin-bottom:4px;
+}
+
+.update-tile-date{
+    color:#888;
+    font-size:11px;
+    margin-bottom:6px;
+}
+
+.update-tile-text{
+    color:#333;
+    font-size:13px;
+    line-height:1.4;
+}
+
+.cal-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    font-weight:bold;
+    color:#005a9c;
+    flex-wrap:wrap;
+    gap:8px;
+}
+
+.cal-header-nav-group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.cal-nav{
+    background:#0078D4;
+    color:white;
+    border:none;
+    border-radius:6px;
+    padding:4px 10px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+.cal-nav:hover{
+    background:#005a9c;
+}
+
+.dept-btn{
+    background:#8e44ad;
+    color:white;
+    border:none;
+    border-radius:6px;
+    padding:6px 12px;
+    cursor:pointer;
+    font-size:12px;
+    font-weight:600;
+}
+
+.dept-btn:hover{
+    background:#6c3483;
+}
+
+.dept-btn.active{
+    background:#6c3483;
+}
+
+.dept-chart-wrap{
+    display:none;
+    margin-top:15px;
+    padding-top:15px;
+    border-top:1px solid #eee;
+}
+
+.dept-chart-wrap.open{
+    display:block;
+}
+
+.dept-chart-container{
+    height:260px;
+    position:relative;
+}
+
+.dept-chart-caption{
+    text-align:center;
+    color:#666;
+    font-size:12px;
+    margin-top:8px;
+}
+
+.dept-debug{
+    text-align:center;
+    color:#d93025;
+    font-size:11px;
+    margin-top:4px;
+}
+
+.cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    gap:4px;
+}
+
+.cal-day-name{
+    text-align:center;
+    font-size:11px;
+    color:#888;
+    font-weight:bold;
+    padding:4px 0;
+}
+
+.cal-cell{
+    aspect-ratio:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+    font-size:13px;
+    cursor:default;
+    position:relative;
+}
+
+.cal-cell.empty{
+    background:transparent;
+}
+
+.cal-cell.normal{
+    background:#f4f7fb;
+    color:#333;
+}
+
+.cal-cell.has-task{
+    background:#0078D4;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.cal-cell.has-task:hover{
+    background:#005a9c;
+}
+
+.cal-cell.completed{
+    background:#28a745;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.cal-cell.completed:hover{
+    background:#1e7e34;
+}
+
+.cal-cell.delayed{
+    background:#d93025;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.cal-cell.delayed:hover{
+    background:#a8231b;
+}
+
+.cal-cell.upcoming{
+    background:#ffc107;
+    color:#333;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.cal-cell.upcoming:hover{
+    background:#e0a800;
+}
+
+.cal-legend{
+    display:flex;
+    gap:14px;
+    justify-content:center;
+    margin-top:10px;
+    font-size:11px;
+    color:#666;
+    flex-wrap:wrap;
+}
+
+.cal-legend-item{
+    display:flex;
+    align-items:center;
+    gap:5px;
+}
+
+.cal-legend-dot{
+    width:10px;
+    height:10px;
+    border-radius:3px;
+    display:inline-block;
+}
+
+.status-tag{
+    display:inline-block;
+    font-size:10px;
+    font-weight:bold;
+    padding:2px 6px;
+    border-radius:4px;
+    margin-top:4px;
+}
+
+.status-tag.completed{
+    background:#28a745;
+    color:white;
+}
+
+.status-tag.delayed{
+    background:#d93025;
+    color:white;
+}
+
+.status-tag.pending{
+    background:#0078D4;
+    color:white;
+}
+
+.status-tag.upcoming{
+    background:#ffc107;
+    color:#333;
+}
+
+.cal-tooltip{
+    display:none;
+    position:fixed;
+    background:#005a9c;
+    color:white;
+    padding:10px 14px;
+    border-radius:8px;
+    font-size:13px;
+    max-width:280px;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    z-index:1000;
+    pointer-events:none;
+}
+
+.carousel{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    position:relative;
+}
+
+.carousel-viewport{
+    background:#f4f7fb;
+    border-radius:12px;
+    padding:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:300px;
+    max-height:600px;
+    overflow:hidden;
+    flex:1;
+}
+
+.carousel-viewport canvas{
+    max-width:100%;
+    max-height:580px;
+    border-radius:6px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+
+.carousel-nav{
+    background:#0078D4;
+    color:white;
+    border:none;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    font-size:20px;
+    cursor:pointer;
+    flex-shrink:0;
+}
+
+.carousel-nav:hover{
+    background:#005a9c;
+}
+
+.carousel-dots{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-top:12px;
+    flex-wrap:wrap;
+}
+
+.carousel-dot{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#ccc;
+    cursor:pointer;
+}
+
+.carousel-dot.active{
+    background:#0078D4;
+}
+
+.carousel-caption{
+    text-align:center;
+    color:#666;
+    font-size:12px;
+    margin-top:8px;
+}
+
+.critical-areas-wrap{
+    margin-top:25px;
+    display:flex;
+    gap:15px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+}
+
+.collapse-card{
+    background:white;
+    border-radius:16px;
+    box-shadow:0 4px 12px rgba(0,0,0,.12);
+    overflow:hidden;
+    flex:1;
+    min-width:280px;
+    max-width:calc(33.333% - 10px);
+}
+
+.collapse-header{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+    padding:14px 16px;
+    cursor:pointer;
+    background:white;
+    border:none;
+    width:100%;
+    text-align:left;
+}
+
+.collapse-header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+}
+
+.collapse-header:hover{
+    background:#f4f7fb;
+}
+
+.collapse-header h3{
+    margin:0;
+    color:#005a9c;
+    font-size:14px;
+}
+
+.collapse-chevron{
+    color:#0078D4;
+    font-size:16px;
+    transition:transform 0.2s;
+}
+
+.collapse-header.open .collapse-chevron{
+    transform:rotate(180deg);
+}
+
+.collapse-body{
+    max-height:0;
+    overflow:hidden;
+    transition:max-height 0.3s ease;
+    padding:0 16px;
+}
+
+.collapse-body.open{
+    max-height:340px;
+    padding:0 16px 16px 16px;
+}
+
+.critical-chart-container{
+    height:260px;
+}
+
+.critical-target-badge{
+    display:inline-block;
+    background:#ff6600;
+    color:white;
+    font-size:10px;
+    font-weight:bold;
+    padding:3px 9px;
+    border-radius:12px;
+}
+
+.civil-foundations-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.civil-foundations-table th {
+  background: #00897b;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.civil-foundations-table td {
+  border: 1px solid #ddd;
+  padding: 9px 10px;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.civil-foundations-table tr:nth-child(even) {
+  background: #f4f7fb;
+}
+
+.drive-section {
+    margin-top: 12px;
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.drive-btn {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f4f7fb;
+    border: none;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #005a9c;
+    transition: background 0.2s;
+}
+
+.drive-btn:hover {
+    background: #e8eef6;
+}
+
+.drive-btn .drive-summary {
+    font-size: 11px;
+    color: #fff;
+    background: #0078D4;
+    padding: 3px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+    margin-right: 10px;
+}
+
+.drive-chevron {
+    font-size: 13px;
+    transition: transform 0.2s;
+}
+
+.drive-btn.open .drive-chevron {
+    transform: rotate(180deg);
+}
+
+.drive-content {
+    display: none;
+    padding: 10px;
+    background: #fff;
+    overflow-x: auto;
+}
+
+.drive-content.open {
+    display: block;
+}
+
+.drive-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.drive-table th {
+    background: #0078D4;
+    color: white;
+    padding: 6px 8px;
+    font-size: 11px;
+}
+
+.drive-table td {
+    padding: 6px 8px;
+    border: 1px solid #eee;
+    font-size: 11px;
+}
+
+.chimney-view-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 12px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.chimney-svg {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+}
+
+.boiler-duct-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    max-height: 440px;
+    box-sizing: border-box;
+}
+
+.boiler-duct-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.boiler-duct-table th {
+    background: #005a9c;
+    color: white;
+    padding: 8px 6px;
+    font-size: 11px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    text-align: center;
+}
+
+.boiler-duct-table td {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.boiler-duct-table td.text-left {
+    text-align: left;
+}
+
+.boiler-duct-table tr:nth-child(even) {
+    background: #f9fbfe;
+}
+
+.boiler-duct-table tr.total-row td {
+    background: #e6f0fa;
+    font-weight: bold;
+    color: #005a9c;
+}
+
+.boiler-duct-table tr.percent-row td {
+    background: #d4edda;
+    font-weight: bold;
+    color: #155724;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>PVUNL Project Dashboard</h1>
+<div class="subtitle">Physical Progress Status as on 31-08-2026</div>
+<div id="fileStatus">Loading latest data...</div>
+<div class="dashboard-links"><a href="login.html">Submit a Daily Update &#8594;</a></div>
+
+<div class="kpi-container">
+
+    <div class="kpi-card" id="kpi-unit1">
+        <h2>Unit 1</h2>
+        <div class="kpi-value">98.48%</div>
+    </div>
+
+    <div class="kpi-card" id="kpi-unit2">
+        <h2>Unit 2</h2>
+        <div class="kpi-value">97.65%</div>
+    </div>
+
+    <div class="kpi-card" id="kpi-unit3">
+        <h2>Unit 3</h2>
+        <div class="kpi-value">58.90%</div>
+    </div>
+
+</div>
+<div id="kpiTooltip" class="kpi-tooltip"></div>
+
+<!-- 50% ROW: Sep Targets & Financial Progress -->
+<div class="split-row-50">
+
+    <div class="half-col">
+        <h2>September Targets</h2>
+        <ul class="target-list" id="targetList">
+            <li class="target-item">Loading...</li>
+        </ul>
+    </div>
+
+    <div class="half-col fin-card" style="margin-top:0">
+        <h2>Financial Progress</h2>
+        <div class="fin-container">
+            <div class="fin-item">
+                <div class="fin-label">Original Cost</div>
+                <div class="fin-value">&#8377;18,668 Cr</div>
+            </div>
+            <div class="fin-item revised">
+                <div class="fin-label">Revised Cost</div>
+                <div class="fin-value">&#8377;21,872 Cr</div>
+            </div>
+            <div class="fin-item accrual">
+                <div class="fin-label">Accrual Capex</div>
+                <div class="fin-value">&#8377;19,405 Cr</div>
+            </div>
+        </div>
+
+        <div class="capex-chart-wrap">
+            <h4 id="capexChartTitle">Capex Progress</h4>
+            <canvas id="capexChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<div class="section" id="slidesSection">
+    <h2>Progress Slides</h2>
+    <div class="carousel">
+        <button class="carousel-nav" onclick="prevSlide()">&#8249;</button>
+        <div class="carousel-viewport">
+            <canvas id="slideCanvas"></canvas>
+        </div>
+        <button class="carousel-nav" onclick="nextSlide()">&#8250;</button>
+    </div>
+    <div class="carousel-dots" id="carouselDots"></div>
+    <div class="carousel-caption" id="carouselCaption">Loading slides...</div>
+</div>
+
+<div class="critical-areas-wrap" id="criticalAreasWrap">
+
+    <div class="collapse-card">
+        <button class="collapse-header" onclick="toggleCollapse(this, 'critical-acc')">
+            <div class="collapse-header-top">
+                <h3>ACC</h3>
+                <span class="collapse-chevron">&#9662;</span>
+            </div>
+            <span class="critical-target-badge" id="target-badge-acc"></span>
+        </button>
+        <div class="collapse-body" id="critical-acc">
+            <div class="critical-chart-container">
+                <canvas id="criticalChartAcc"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapse-card">
+        <button class="collapse-header" onclick="toggleCollapse(this, 'critical-boiler')">
+            <div class="collapse-header-top">
+                <h3>Boiler - NDHT Joints</h3>
+                <span class="collapse-chevron">&#9662;</span>
+            </div>
+            <span class="critical-target-badge" id="target-badge-boiler"></span>
+        </button>
+        <div class="collapse-body" id="critical-boiler">
+            <div class="critical-chart-container">
+                <canvas id="criticalChartBoiler"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="collapse-card">
+        <button class="collapse-header" onclick="toggleCollapse(this, 'critical-pcp')">
+            <div class="collapse-header-top">
+                <h3>PCP</h3>
+                <span class="collapse-chevron">&#9662;</span>
+            </div>
+            <span class="critical-target-badge" id="target-badge-pcp"></span>
+        </button>
+        <div class="collapse-body" id="critical-pcp">
+            <div class="critical-chart-container">
+                <canvas id="criticalChartPcp"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="chart-row">
+
+    <div class="chart-col">
+        <h2>ACC-3 Progress vs Manpower Deployment</h2>
+        <canvas id="accChart"></canvas>
+    </div>
+
+    <div class="chart-col">
+        <h2>Daily Major Updates</h2>
+        <div class="update-tiles">
+
+            <div class="update-tile" id="tile-acc">
+                <div class="update-tile-title">ACC</div>
+                <div class="update-tile-date" id="date-acc"></div>
+                <div class="update-tile-text" id="text-acc">Loading...</div>
+            </div>
+
+            <div class="update-tile boiler" id="tile-boiler">
+                <div class="update-tile-title">Boiler</div>
+                <div class="update-tile-date" id="date-boiler"></div>
+                <div class="update-tile-text" id="text-boiler">Loading...</div>
+            </div>
+
+            <div class="update-tile pcp" id="tile-pcp">
+                <div class="update-tile-title">PCP Joint</div>
+                <div class="update-tile-date" id="date-pcp"></div>
+                <div class="update-tile-text" id="text-pcp">Loading...</div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- 50% ROW: Manpower Deployment Status & Electrical Status -->
+<div class="split-row-50">
+
+    <div class="half-col">
+        <h2>Manpower Deployment Status as on <span id="manpowerAsOnDate"></span></h2>
+        <table id="manpowerTable">
+            <thead>
+                <tr>
+                    <th>Agency</th>
+                    <th>Required</th>
+                    <th>Available</th>
+                    <th>Shortfall</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="half-col">
+        <h2>Electrical Status</h2>
+
+        <!-- 11 KV Drives Section -->
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-11kv', this)">
+                <span>⚡ 11 KV Drives</span>
+                <span class="drive-summary" id="badge-11kv">Loading...</span>
+                <span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-11kv">
+                <table class="drive-table" id="table-11kv">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Motor ID</th>
+                            <th>Rating</th>
+                            <th>Charging Date</th>
+                            <th>Trial Date</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 3.3 KV Drives Section -->
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-33kv', this)">
+                <span>⚡ 3.3 KV Drives</span>
+                <span class="drive-summary" id="badge-33kv">Loading...</span>
+                <span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-33kv">
+                <table class="drive-table" id="table-33kv">
+                    <thead>
+                        <tr>
+                            <th>S.No</th>
+                            <th>Motor ID</th>
+                            <th>Rating</th>
+                            <th>Charging Date</th>
+                            <th>Trial Date</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 50% ROW: Civil Foundations Status & Task Calendar -->
+<div class="split-row-50">
+
+    <div class="half-col" id="civilFoundationsSection">
+      <h2>Civil Foundations Status</h2>
+      <table class="civil-foundations-table" id="civilFoundationsTable">
+        <thead>
+          <tr>
+            <th>Cable Rack / Foundation</th>
+            <th>Completed / Total Foundations</th>
+            <th>Commitment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="3">Loading civil foundations...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="half-col" style="margin-top:0;">
+        <h2>Task Calendar</h2>
+        <div id="calendarHeader" class="cal-header">
+            <div class="cal-header-nav-group">
+                <button onclick="changeMonth(-1)" class="cal-nav">&#8249;</button>
+                <span id="calMonthLabel"></span>
+                <button onclick="changeMonth(1)" class="cal-nav">&#8250;</button>
+            </div>
+            <button class="dept-btn" id="deptToggleBtn" onclick="toggleDeptChart()">Dept Targets</button>
+        </div>
+        <div id="calendarGrid" class="cal-grid"></div>
+        <div class="cal-legend">
+            <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#0078D4"></span> Pending</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#ffc107"></span> Upcoming</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#28a745"></span> Completed</div>
+            <div class="cal-legend-item"><span class="cal-legend-dot" style="background:#d93025"></span> Delayed</div>
+        </div>
+        <div id="calTooltip" class="cal-tooltip"></div>
+
+        <div class="dept-chart-wrap" id="deptChartWrap">
+            <div class="dept-chart-container">
+                <canvas id="deptChart"></canvas>
+            </div>
+            <div class="dept-chart-caption" id="deptChartCaption">Targets vs Completed by Department</div>
+            <div class="dept-debug" id="deptDebug"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 50% ROW: Key Milestones & Recent Communications -->
+<div class="split-row-50">
+
+    <div class="half-col">
+        <h2>Key Milestones</h2>
+        <table id="milestoneTable">
+            <thead>
+                <tr>
+                    <th>Milestone</th>
+                    <th>Target Date</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="half-col">
+        <h2>Recent Communications</h2>
+        <div class="comm-tabs" id="commTabs">
+            <div class="comm-tab active" data-folder="CEO Communication" onclick="switchCommTab('CEO Communication', this)">CEO</div>
+            <div class="comm-tab" data-folder="GM Project Communication" onclick="switchCommTab('GM Project Communication', this)">GM Project</div>
+            <div class="comm-tab" data-folder="EIC Communications" onclick="switchCommTab('EIC Communications', this)">EIC</div>
+            <div class="comm-tab" data-folder="BHEL Communications" onclick="switchCommTab('BHEL Communications', this)">BHEL</div>
+            <div class="comm-tab" data-folder="Meeting record notes" onclick="switchCommTab('Meeting record notes', this)">MoMs</div>
+            <div class="comm-tab" data-folder="Hop Visits" onclick="switchCommTab('Hop Visits', this)">Hop Visits</div>
+        </div>
+        <div id="pdfListContainer">
+            <div class="empty-msg">Loading recent communications...</div>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="comm-pagination" id="commPagination" style="display: none;">
+            <button class="comm-nav-btn" id="commPrevBtn" onclick="changeCommPage(-1)">&#8592; Previous</button>
+            <span class="comm-page-info" id="commPageInfo"></span>
+            <button class="comm-nav-btn" id="commNextBtn" onclick="changeCommPage(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- 50% ROW: Chimney Status & Boiler Duct Status -->
+<div class="split-row-50">
+
+    <div class="half-col">
+        <h2>Chimney Status</h2>
+        <div class="chimney-view-card">
+            <svg class="chimney-svg" viewBox="0 0 320 400" xmlns="http://www.w3.org/2000/svg">
+                <!-- Segment 1 -->
+                <polygon points="115,20 205,20 215,85 105,85" fill="#28a745" stroke="#ffffff" stroke-width="2"/>
+                <text x="160" y="56" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="Segoe UI, Arial">segment 1: Completed</text>
+
+                <!-- Segment 2 -->
+                <polygon points="105,88 215,88 225,155 95,155" fill="#28a745" stroke="#ffffff" stroke-width="2"/>
+                <text x="160" y="126" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="Segoe UI, Arial">segment 2: Completed</text>
+
+                <!-- Segment 3 -->
+                <polygon points="95,158 225,158 238,228 82,228" fill="#ffc107" stroke="#ffffff" stroke-width="2"/>
+                <text x="160" y="198" fill="#212529" font-size="14" font-weight="bold" text-anchor="middle" font-family="Segoe UI, Arial">segment 3: 25-09-26</text>
+
+                <!-- Segment 4 -->
+                <polygon points="82,231 238,231 252,305 68,305" fill="#0078D4" stroke="#ffffff" stroke-width="2"/>
+                <text x="160" y="273" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Segoe UI, Arial">segment 4: 31-10-26</text>
+
+                <!-- Segment 5 -->
+                <polygon points="68,308 252,308 268,385 52,385" fill="#6c757d" stroke="#ffffff" stroke-width="2"/>
+                <text x="160" y="351" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Segoe UI, Arial">segment 5: 10-12-26</text>
+            </svg>
+            <div style="font-size: 11px; color: #666; margin-top: 10px;">Erection target milestones by shell segment</div>
+        </div>
+    </div>
+
+    <div class="half-col">
+        <h2>Boiler Duct Status</h2>
+        <div class="boiler-duct-table-wrap">
+            <table class="boiler-duct-table" id="boilerDuctTable">
+                <thead>
+                    <tr>
+                        <th>Sl No</th>
+                        <th>PGMA</th>
+                        <th>Circuit</th>
+                        <th>Total Mod</th>
+                        <th>Pre Assy</th>
+                        <th>Bal Assy</th>
+                        <th>Erection</th>
+                        <th>Bal Ern</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="8">Loading boiler duct data...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+let chartObj = null;
+let capexChartObj = null;
+let criticalChartAcc = null;
+let criticalChartBoiler = null;
+let criticalChartPcp = null;
+let deptChartObj = null;
+let deptChartOpen = false;
+let rawTaskRows = [];
+let tasksLoaded = false;
+
+const DATA_FILE_PATH = 'Data-file.xlsx';
+const PDF_ROOT = 'Communications';
+const PDF_SUBFOLDERS = ['CEO Communication', 'GM Project Communication', 'EIC Communications', 'BHEL Communications','Meeting record notes','Hop Visits'];
+let currentCommFolder = 'CEO Communication';
+const TASK_FILE_PATH = 'Calendar-tasks.xlsx';
+const UPDATES_FILE_PATH = 'Daily-updates.xlsx';
+const KPI_FILE_PATH = 'KPI-details.xlsx';
+const SLIDES_PDF_PATH = 'Unit 3 work progress comparison in last 1 month.pdf';
+
+async function loadWorkbook(path){
+
+    const response = await fetch(path + '?t=' + Date.now());
+
+    if (!response.ok) {
+        throw new Error(`Failed to load ${path}. HTTP Status: ${response.status}`);
+    }
+
+    const data = await response.arrayBuffer();
+
+    return XLSX.read(data, {type:'array'});
+}
+
+function parseAnyDate(rawDate){
+
+    if(rawDate instanceof Date){
+        return new Date(rawDate.getFullYear(), rawDate.getMonth(), rawDate.getDate());
+    }
+
+    if(typeof rawDate === 'number'){
+        const parsed = XLSX.SSF.parse_date_code(rawDate);
+        return new Date(parsed.y, parsed.m - 1, parsed.d);
+    }
+
+    if(typeof rawDate === 'string'){
+
+        const trimmed = rawDate.trim();
+
+        let match = trimmed.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+
+        if(match){
+
+            let part1 = parseInt(match[1], 10);
+            let part2 = parseInt(match[2], 10);
+            let year = parseInt(match[3], 10);
+
+            if(year < 100){
+                year += (year <= 49 ? 2000 : 1900);
+            }
+
+            let month, day;
+
+            if(part1 > 12){
+                day = part1;
+                month = part2;
+            } else if(part2 > 12){
+                month = part1;
+                day = part2;
+            } else {
+                month = part1;
+                day = part2;
+            }
+
+            const d = new Date(year, month - 1, day);
+
+            if(!isNaN(d) && d.getFullYear() > 2000){
+                return d;
+            }
+        }
+
+        const fallback = new Date(trimmed);
+
+        if(!isNaN(fallback)){
+            const fixed = new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
+            if(fixed.getFullYear() < 100){
+                fixed.setFullYear(fixed.getFullYear() + (fixed.getFullYear() <= 49 ? 2000 : 1900));
+            }
+            return fixed;
+        }
+
+        return fallback;
+    }
+
+    return new Date(NaN);
+}
+
+function parsePercentValue(pct){
+
+    if(pct === null || pct === undefined || pct === ''){
+        return 0;
+    }
+
+    let num = pct;
+
+    if(typeof num === 'string'){
+        num = parseFloat(num.replace('%',''));
+    }
+
+    if(isNaN(num)){
+        return 0;
+    }
+
+    if(num <= 1){
+        num = num * 100;
+    }
+
+    return num;
+}
+
+/* ---------- JavaScript ---------- */
+async function loadCivilFoundations() {
+  const tableBody = document.querySelector("#civilFoundationsTable tbody");
+  if (!tableBody) return;
+
+  try {
+    const workbook = await loadWorkbook("Data-file.xlsx");
+    const sheet = workbook.Sheets["Civil foundations"];
+
+    if (!sheet) {
+      tableBody.innerHTML = '<tr><td colspan="3">Civil foundations sheet not found.</td></tr>';
+      return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const dataRows = rows.slice(1).filter(row =>
+      row && row[0] !== undefined && row[0] !== null && String(row[0]).trim() !== ""
+    );
+
+    if (!dataRows.length) {
+      tableBody.innerHTML = '<tr><td colspan="3">No civil foundations data found.</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = dataRows.map(row => `
+      <tr>
+        <td>${civilHtml(row[0])}</td>
+        <td>${civilHtml(row[1] || "")}</td>
+        <td>${civilHtml(row[2] || "")}</td>
+      </tr>
+    `).join("");
+  } catch (error) {
+    console.error("Civil foundations load failed:", error);
+    tableBody.innerHTML = '<tr><td colspan="3">Could not load Data-file.xlsx.</td></tr>';
+  }
+}
+
+function civilHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function loadACC(workbook){
+
+    const sheet = workbook.Sheets['ACC 3'];
+
+    if(!sheet){
+        return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    const months = [];
+    const manpower = [];
+    const monthlyTonnage = [];
+    const cumulative = [];
+
+    rows.forEach(r => {
+
+        const keys = Object.keys(r);
+
+        months.push(r[keys[0]]);
+        manpower.push(r[keys[1]]);
+        monthlyTonnage.push(r[keys[2]]);
+        cumulative.push(r[keys[3]]);
+    });
+
+    if(chartObj){
+        chartObj.destroy();
+    }
+
+    chartObj = new Chart(
+        document.getElementById('accChart'),
+        {
+
+            data:{
+                labels:months,
+
+                datasets:[
+
+                {
+                    type:'bar',
+                    label:'Manpower Deployed',
+                    data:manpower,
+                    backgroundColor:'#0078D4',
+                    yAxisID:'y'
+                },
+
+                {
+                    type:'bar',
+                    label:'Monthly Erection Tonnage (MT)',
+                    data:monthlyTonnage,
+                    backgroundColor:'#82c4f0',
+                    yAxisID:'y1'
+                },
+
+                {
+                    type:'line',
+                    label:'Cumulative Erection (MT)',
+                    data:cumulative,
+                    borderColor:'#ff6600',
+                    backgroundColor:'#ff6600',
+                    borderWidth:4,
+                    tension:0.3,
+                    yAxisID:'y1'
+                }
+
+                ]
+            },
+
+            options:{
+
+                responsive:true,
+
+                interaction:{
+                    mode:'index'
+                },
+
+                scales:{
+
+                    y:{
+                        beginAtZero:true,
+                        title:{
+                            display:true,
+                            text:'Manpower'
+                        }
+                    },
+
+                    y1:{
+                        position:'right',
+                        beginAtZero:true,
+
+                        grid:{
+                            drawOnChartArea:false
+                        },
+
+                        title:{
+                            display:true,
+                            text:'Tonnage (MT)'
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+function loadManpower(workbook){
+
+    const sheet = workbook.Sheets['Manpower'];
+
+    if(!sheet){
+        return;
+    }
+
+    const asOnEl = document.getElementById('manpowerAsOnDate');
+    if(asOnEl){
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        asOnEl.textContent = yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    const tbody = document.querySelector('#manpowerTable tbody');
+
+    tbody.innerHTML='';
+
+    rows.forEach(row => {
+
+        const values = Object.values(row);
+
+        const tr = document.createElement('tr');
+
+        if(values[0] && values[0].toString().trim() === 'Total'){
+            tr.classList.add('total-row');
+        }
+
+        tr.innerHTML=`
+            <td>${values[0]}</td>
+            <td>${values[1]}</td>
+            <td>${values[2]}</td>
+            <td class="shortfall">${values[3]}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function toggleDriveDropdown(contentId, btn) {
+    const content = document.getElementById(contentId);
+    const isOpen = content.classList.contains('open');
+    if (isOpen) {
+        content.classList.remove('open');
+        btn.classList.remove('open');
+    } else {
+        content.classList.add('open');
+        btn.classList.add('open');
+    }
+}
+
+function loadElectrical(workbook) {
+    const sheet = workbook.Sheets['Electrical'];
+    if (!sheet) return;
+
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const headerIndex = rawRows.findIndex(r => 
+        r && r.some(c => String(c).trim().toUpperCase() === 'MOTOR ID')
+    );
+    if (headerIndex === -1) return;
+
+    const dataRows = rawRows.slice(headerIndex + 1);
+    const tbody11 = document.querySelector('#table-11kv tbody');
+    const tbody33 = document.querySelector('#table-33kv tbody');
+    tbody11.innerHTML = '';
+    tbody33.innerHTML = '';
+
+    dataRows.forEach(row => {
+        if (!row || row.every(cell => cell === undefined || cell === null || String(cell).trim() === '')) {
+            return;
+        }
+
+        const sNo = row[0];
+        const motorId = row[1] ? String(row[1]).trim() : '';
+        const rating = row[2] || '-';
+        const volt = row[3];
+        const boardDate = row[4] || '-';
+        const trialDate = row[5] || '-';
+
+        // Update summary badges for milestone lines
+        if (motorId.includes('11 KV Drives')) {
+            document.getElementById('badge-11kv').textContent = boardDate;
+            return;
+        }
+        if (motorId.includes('3.3 KV Drives')) {
+            document.getElementById('badge-33kv').textContent = boardDate;
+            return;
+        }
+
+        const rowHtml = `
+            <tr>
+                <td>${sNo !== undefined && sNo !== null ? sNo : ''}</td>
+                <td><strong>${motorId}</strong></td>
+                <td>${rating}</td>
+                <td>${boardDate}</td>
+                <td>${trialDate}</td>
+            </tr>
+        `;
+
+        if (volt === 11 || volt === '11') {
+            tbody11.innerHTML += rowHtml;
+        } else if (volt === 3.3 || volt === '3.3') {
+            tbody33.innerHTML += rowHtml;
+        }
+    });
+}
+
+function loadMilestones(workbook){
+
+    const sheet = workbook.Sheets['Milestone'];
+
+    if(!sheet){
+        return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    const tbody = document.querySelector('#milestoneTable tbody');
+
+    tbody.innerHTML='';
+
+    rows.forEach(row => {
+
+        const values = Object.values(row);
+
+        const tr = document.createElement('tr');
+
+        tr.innerHTML=`
+            <td>${values[0]}</td>
+            <td>${values[1]}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function loadCapex(workbook){
+
+    const sheet = workbook.Sheets['Capex'];
+
+    if(!sheet){
+        return;
+    }
+
+    const rows = XLSX.utils.sheet_to_json(sheet);
+
+    if(rows.length === 0){
+        return;
+    }
+
+    const labels = [];
+    const values = [];
+    const colors = ['#0078D4', '#28a745', '#ff6600', '#8e44ad'];
+
+    rows.forEach(r => {
+
+        const keys = Object.keys(r);
+        const desc = r[keys[0]];
+        const pct = parsePercentValue(r[keys[2]]);
+
+        labels.push(desc);
+        values.push(pct);
+    });
+
+    if(capexChartObj){
+        capexChartObj.destroy();
+    }
+
+    capexChartObj = new Chart(
+        document.getElementById('capexChart'),
+        {
+            type: 'bar',
+
+            data:{
+                labels: labels,
+                datasets:[{
+                    label: 'Progress (%)',
+                    data: values,
+                    backgroundColor: labels.map((l,i) => colors[i % colors.length]),
+                    borderRadius: 4
+                }]
+            },
+
+            options:{
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+
+                plugins:{
+                    legend:{ display:false },
+                    tooltip:{
+                        callbacks:{
+                            label: (ctx) => ctx.parsed.x.toFixed(1) + '%'
+                        }
+                    }
+                },
+
+                scales:{
+                    x:{
+                        beginAtZero:true,
+                        max:100,
+                        ticks:{
+                            callback: (v) => v + '%'
+                        }
+                    },
+                    y:{
+                        ticks:{
+                            font:{ size:11 }
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+async function loadDashboard(){
+
+    try{
+
+        const workbook = await loadWorkbook(DATA_FILE_PATH);
+
+        loadACC(workbook);
+        loadManpower(workbook);
+        loadMilestones(workbook);
+        loadCapex(workbook);
+        loadElectrical(workbook);
+        loadBoilerDuctStatus(workbook);
+
+        document.getElementById('fileStatus').textContent =
+            'Data last refreshed at ' + new Date().toLocaleTimeString();
+
+    } catch(err){
+
+        console.error(err);
+
+        document.getElementById('fileStatus').textContent =
+            'Could not load data file. Please check that "' + DATA_FILE_PATH + '" exists on the server.';
+    }
+}
+
+let currentCommPage = 1;
+const COMM_PAGE_SIZE = 5;
+let currentCommFiles = [];
+
+function switchCommTab(folderName, tabEl){
+    currentCommFolder = folderName;
+    currentCommPage = 1;
+
+    document.querySelectorAll('#commTabs .comm-tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+
+    loadRecentPdfs();
+}
+
+async function loadRecentPdfs(){
+    const container = document.getElementById('pdfListContainer');
+    const pagination = document.getElementById('commPagination');
+    const folderPath = PDF_ROOT + '/' + currentCommFolder;
+    const manifestPath = folderPath + '/manifest.json';
+
+    container.innerHTML = '<div class="empty-msg">Loading recent communications...</div>';
+    if(pagination) pagination.style.display = 'none';
+
+    try {
+        const response = await fetch(manifestPath + '?t=' + Date.now());
+
+        if(!response.ok){
+            throw new Error('Manifest not found');
+        }
+
+        const files = await response.json();
+
+        if(!files || files.length === 0){
+            container.innerHTML = '<div class="empty-msg">No communications uploaded yet in ' + currentCommFolder + '.</div>';
+            return;
+        }
+
+        currentCommFiles = files.slice().sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        const totalPages = Math.ceil(currentCommFiles.length / COMM_PAGE_SIZE);
+        if (currentCommPage > totalPages) currentCommPage = totalPages;
+        if (currentCommPage < 1) currentCommPage = 1;
+
+        renderCommPage();
+
+    } catch(err){
+        console.error(err);
+        container.innerHTML = '<div class="empty-msg">Could not load communications. Ensure "' + manifestPath + '" exists.</div>';
+    }
+}
+
+function renderCommPage(){
+    const container = document.getElementById('pdfListContainer');
+    const pagination = document.getElementById('commPagination');
+    const prevBtn = document.getElementById('commPrevBtn');
+    const nextBtn = document.getElementById('commNextBtn');
+    const pageInfo = document.getElementById('commPageInfo');
+    const folderPath = PDF_ROOT + '/' + currentCommFolder;
+
+    const totalFiles = currentCommFiles.length;
+    const totalPages = Math.ceil(totalFiles / COMM_PAGE_SIZE) || 1;
+    const startIndex = (currentCommPage - 1) * COMM_PAGE_SIZE;
+    const pageFiles = currentCommFiles.slice(startIndex, startIndex + COMM_PAGE_SIZE);
+
+    const ul = document.createElement('ul');
+    ul.className = 'pdf-list';
+
+    pageFiles.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'pdf-item';
+        const dateStr = item.date ? new Date(item.date).toLocaleDateString() : '';
+
+        li.innerHTML = `
+            <a class="pdf-name" href="${folderPath}/${item.file}" target="_blank">&#128196; ${item.file}</a>
+            <span class="pdf-date">${dateStr}</span>
+        `;
+        ul.appendChild(li);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(ul);
+
+    pagination.style.display = totalFiles > COMM_PAGE_SIZE ? 'flex' : 'none';
+    pageInfo.textContent = `Page ${currentCommPage} of ${totalPages} (${totalFiles} total)`;
+    prevBtn.disabled = (currentCommPage === 1);
+    nextBtn.disabled = (currentCommPage === totalPages);
+}
+
+function changeCommPage(delta){
+    currentCommPage += delta;
+    renderCommPage();
+}
+
+let taskMap = {};
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+function classifyStatus(statusRaw){
+
+    const status = (statusRaw || '').toString().trim().toLowerCase();
+
+    if(status.startsWith('completed')){
+        return 'completed';
+    }
+
+    if(status.startsWith('delayed')){
+        return 'delayed';
+    }
+
+    return 'pending';
+}
+
+async function loadTasks(){
+
+    try{
+
+        const workbook = await loadWorkbook(TASK_FILE_PATH);
+        const sheet = workbook.Sheets['Tasks'];
+
+        if(!sheet){
+            return;
+        }
+
+        const allRows = XLSX.utils.sheet_to_json(sheet, {header:1, raw:true});
+
+        if(allRows.length < 2){
+            return;
+        }
+
+        const dataRows = allRows.slice(1);
+
+        taskMap = {};
+        rawTaskRows = [];
+
+        dataRows.forEach(row => {
+
+            if(!row || row.length === 0){
+                return;
+            }
+
+            const rawDate = row[0];
+            const activity = row[1];
+            const statusRaw = (row[2] !== undefined && row[2] !== null) ? row[2] : '';
+            const department = (row[3] !== undefined && row[3] !== null) ? row[3].toString().trim() : '';
+
+            if(rawDate === undefined || rawDate === null || rawDate === ''){
+                return;
+            }
+
+            const dateObj = parseAnyDate(rawDate);
+
+            if(isNaN(dateObj)){
+                return;
+            }
+
+            const statusClass = classifyStatus(statusRaw);
+
+            rawTaskRows.push({
+                date: dateObj,
+                activity: activity,
+                status: statusRaw || '',
+                statusClass: statusClass,
+                department: department || 'Unassigned'
+            });
+
+            const key = dateObj.getFullYear() + '-' + (dateObj.getMonth()+1) + '-' + dateObj.getDate();
+
+            if(!taskMap[key]){
+                taskMap[key] = [];
+            }
+
+            taskMap[key].push({
+                activity: activity,
+                status: statusRaw || '',
+                statusClass: statusClass
+            });
+        });
+
+        tasksLoaded = true;
+
+        renderCalendar();
+
+        if(deptChartOpen){
+            renderDeptChart();
+        }
+
+    } catch(err){
+        console.error(err);
+        document.getElementById('calendarGrid').innerHTML =
+            '<div class="empty-msg">Could not load "' + TASK_FILE_PATH + '"</div>';
+    }
+}
+
+function changeMonth(delta){
+
+    calMonth += delta;
+
+    if(calMonth < 0){
+        calMonth = 11;
+        calYear -= 1;
+    } else if(calMonth > 11){
+        calMonth = 0;
+        calYear += 1;
+    }
+
+    renderCalendar();
+
+    if(deptChartOpen){
+        renderDeptChart();
+    }
+}
+
+function toggleDeptChart(){
+
+    deptChartOpen = !deptChartOpen;
+
+    const wrap = document.getElementById('deptChartWrap');
+    const btn = document.getElementById('deptToggleBtn');
+
+    if(deptChartOpen){
+
+        wrap.classList.add('open');
+        btn.classList.add('active');
+
+        setTimeout(() => {
+            renderDeptChart();
+        }, 100);
+
+    } else {
+        wrap.classList.remove('open');
+        btn.classList.remove('active');
+    }
+}
+
+function renderDeptChart(){
+
+    const canvasEl = document.getElementById('deptChart');
+    const captionEl = document.getElementById('deptChartCaption');
+    const debugEl = document.getElementById('deptDebug');
+
+    if(!canvasEl){
+        return;
+    }
+
+    debugEl.textContent = '';
+
+    if(!tasksLoaded){
+        captionEl.textContent = 'Loading task data...';
+        return;
+    }
+
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    const monthTasks = rawTaskRows.filter(t =>
+        t.date.getFullYear() === calYear && t.date.getMonth() === calMonth
+    );
+
+    const deptStats = {};
+
+    monthTasks.forEach(t => {
+
+        if(!deptStats[t.department]){
+            deptStats[t.department] = { total: 0, completed: 0 };
+        }
+
+        deptStats[t.department].total += 1;
+
+        if(t.statusClass === 'completed'){
+            deptStats[t.department].completed += 1;
+        }
+    });
+
+    const departments = Object.keys(deptStats);
+
+    captionEl.textContent =
+        departments.length > 0
+            ? 'Targets vs Completed by Department - ' + monthNames[calMonth] + ' ' + calYear
+            : 'No tasks with department data found for ' + monthNames[calMonth] + ' ' + calYear;
+
+    if(deptChartObj){
+        deptChartObj.destroy();
+        deptChartObj = null;
+    }
+
+    if(departments.length === 0){
+        debugEl.textContent = 'Total task rows loaded: ' + rawTaskRows.length + '. None matched ' + monthNames[calMonth] + ' ' + calYear + '.';
+        return;
+    }
+
+    const ctx = canvasEl.getContext('2d');
+
+    deptChartObj = new Chart(
+        ctx,
+        {
+            type: 'bar',
+
+            data:{
+                labels: departments,
+                datasets:[
+                    {
+                        label: 'Targets',
+                        data: departments.map(d => deptStats[d].total),
+                        backgroundColor: '#0078D4',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Completed',
+                        data: departments.map(d => deptStats[d].completed),
+                        backgroundColor: '#28a745',
+                        borderRadius: 4
+                    }
+                ]
+            },
+
+            options:{
+                responsive:true,
+                maintainAspectRatio:false,
+
+                plugins:{
+                    legend:{
+                        display:true,
+                        position:'top'
+                    }
+                },
+
+                scales:{
+                    y:{
+                        beginAtZero:true,
+                        ticks:{ stepSize:1 }
+                    }
+                }
+            }
+        }
+    );
+}
+
+function getDayOverallStatus(tasks, cellDate, today){
+
+    if(tasks.some(t => t.statusClass === 'delayed')){
+        return 'delayed';
+    }
+
+    if(tasks.every(t => t.statusClass === 'completed')){
+        return 'completed';
+    }
+
+    if(cellDate > today){
+        return 'upcoming';
+    }
+
+    return 'pending';
+}
+
+function renderCalendar(){
+
+    const grid = document.getElementById('calendarGrid');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    document.getElementById('calMonthLabel').textContent = monthNames[calMonth] + ' ' + calYear;
+
+    grid.innerHTML = '';
+
+    const dayNames = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+    dayNames.forEach(d => {
+        const el = document.createElement('div');
+        el.className = 'cal-day-name';
+        el.textContent = d;
+        grid.appendChild(el);
+    });
+
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    for(let i = 0; i < firstDay; i++){
+        const empty = document.createElement('div');
+        empty.className = 'cal-cell empty';
+        grid.appendChild(empty);
+    }
+
+    for(let d = 1; d <= daysInMonth; d++){
+
+        const key = calYear + '-' + (calMonth+1) + '-' + d;
+        const cell = document.createElement('div');
+        const tasks = taskMap[key];
+        const cellDate = new Date(calYear, calMonth, d);
+
+        if(tasks && tasks.length > 0){
+
+            const overallStatus = getDayOverallStatus(tasks, cellDate, todayMidnight);
+            cell.className = 'cal-cell ' + overallStatus;
+
+            cell.addEventListener('mouseenter', (e) => {
+                showCalTooltip(e, tasks, overallStatus);
+            });
+
+            cell.addEventListener('mousemove', (e) => {
+                moveCalTooltip(e);
+            });
+
+            cell.addEventListener('mouseleave', () => {
+                hideCalTooltip();
+            });
+
+        } else {
+            cell.className = 'cal-cell normal';
+        }
+
+        cell.textContent = d;
+        grid.appendChild(cell);
+    }
+}
+
+function showCalTooltip(e, tasks, overallStatus){
+
+    const tooltip = document.getElementById('calTooltip');
+
+    const itemsHtml = tasks.map(t => {
+
+        let tagClass = t.statusClass;
+        let tagText = t.status;
+
+        if(t.statusClass === 'pending' && overallStatus === 'upcoming'){
+            tagClass = 'upcoming';
+            tagText = t.status || 'Upcoming';
+        } else if(!tagText){
+            tagText = 'Pending';
+        }
+
+        const tagHtml = '<span class="status-tag ' + tagClass + '">' + tagText + '</span>';
+
+        return '<div style="margin-bottom:6px">&#8226; ' + t.activity + '<br>' + tagHtml + '</div>';
+
+    }).join('');
+
+    tooltip.innerHTML = itemsHtml;
+    tooltip.style.display = 'block';
+    moveCalTooltip(e);
+}
+
+function moveCalTooltip(e){
+
+    const tooltip = document.getElementById('calTooltip');
+    tooltip.style.left = (e.clientX + 15) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+}
+
+function hideCalTooltip(){
+    document.getElementById('calTooltip').style.display = 'none';
+}
+
+async function loadDailyUpdates(){
+
+    try{
+
+        const workbook = await loadWorkbook(UPDATES_FILE_PATH);
+        const sheet = workbook.Sheets['Updates'];
+
+        if(!sheet){
+            return;
+        }
+
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        const latest = { 'ACC': null, 'Boiler': null, 'PCP Joint': null };
+
+        rows.forEach(r => {
+
+            const keys = Object.keys(r);
+            let rawDate = r[keys[0]];
+            let category = (r[keys[1]] || '').toString().trim();
+            let update = r[keys[2]];
+
+            const dateObj = parseAnyDate(rawDate);
+
+            if(isNaN(dateObj) || !(category in latest)){
+                return;
+            }
+
+            if(!latest[category] || dateObj > latest[category].dateObj){
+                latest[category] = { dateObj: dateObj, text: update };
+            }
+        });
+
+        const mapping = { 'ACC':'acc', 'Boiler':'boiler', 'PCP Joint':'pcp' };
+
+        Object.keys(mapping).forEach(cat => {
+
+            const id = mapping[cat];
+            const entry = latest[cat];
+
+            if(entry){
+                document.getElementById('date-' + id).textContent = entry.dateObj.toLocaleDateString();
+                document.getElementById('text-' + id).textContent = entry.text;
+            } else {
+                document.getElementById('date-' + id).textContent = '';
+                document.getElementById('text-' + id).textContent = 'No update yet.';
+            }
+        });
+
+    } catch(err){
+        console.error(err);
+        ['acc','boiler','pcp'].forEach(id => {
+            document.getElementById('text-' + id).textContent = 'Could not load "' + UPDATES_FILE_PATH + '"';
+        });
+    }
+}
+
+async function loadCriticalAreas() {
+  try {
+    const workbook = await loadWorkbook(UPDATES_FILE_PATH);
+    const sheet = workbook.Sheets["Critical areas"];
+    if (!sheet) return;
+
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (rows.length < 2) return;
+
+    const headerRow = rows[0];
+    const colNames = headerRow.slice(1);
+    let targets = [null, null, null];
+    const dailyRows = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row[0] === undefined || row[0] === null) continue;
+      const firstCell = row[0].toString().trim().toLowerCase();
+
+      if (firstCell.includes("target")) {
+        targets = [row[1], row[2], row[3]];
+        continue;
+      }
+
+      const dateObj = parseAnyDate(row[0]);
+      if (!isNaN(dateObj)) {
+        dailyRows.push({ date: dateObj, values: [row[1], row[2], row[3]] });
+      }
+    }
+
+    dailyRows.sort((a, b) => a.date - b.date);
+    const last7 = dailyRows.slice(-7);
+    const labels = last7.map((r) => r.date.getDate() + "/" + (r.date.getMonth() + 1));
+
+    renderCriticalChart("criticalChartAcc", labels, last7.map((r) => r.values[0] || 0), targets[0], "#0078D4", "target-badge-acc", colNames[0] || "ACC");
+    renderCriticalChart("criticalChartBoiler", labels, last7.map((r) => r.values[1] || 0), targets[1], "#ff6600", "target-badge-boiler", colNames[1] || "Boiler");
+    renderCriticalChart("criticalChartPcp", labels, last7.map((r) => r.values[2] || 0), targets[2], "#28a745", "target-badge-pcp", colNames[2] || "PCP");
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+const barValueLabelPlugin = {
+  id: "barValueLabelPlugin",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      if (dataset.type !== "bar") return;
+      const meta = chart.getDatasetMeta(datasetIndex);
+      meta.data.forEach((bar, index) => {
+        const value = dataset.data[index];
+        if (value === null || value === undefined) return;
+        ctx.save();
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 11px Segoe UI, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(value, bar.x, bar.y - 4);
+        ctx.restore();
+      });
+    });
+  },
+};
+
+Chart.register(barValueLabelPlugin);
+
+function renderCriticalChart(canvasId, labels, values, target, barColor, badgeId, seriesLabel) {
+  const badge = document.getElementById(badgeId);
+  if (badge) badge.textContent = "Target: " + (target !== null ? target : "N/A");
+
+  if (canvasId === "criticalChartAcc") { if (criticalChartAcc) criticalChartAcc.destroy(); }
+  else if (canvasId === "criticalChartBoiler") { if (criticalChartBoiler) criticalChartBoiler.destroy(); }
+  else if (canvasId === "criticalChartPcp") { if (criticalChartPcp) criticalChartPcp.destroy(); }
+
+  const targetLineData = target !== null ? labels.map(() => target) : [];
+
+  const newChart = new Chart(document.getElementById(canvasId), {
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          type: "bar",
+          label: seriesLabel + " - Daily",
+          data: values,
+          backgroundColor: barColor,
+          borderRadius: 4,
+          order: 2,
+        },
+        {
+          type: "line",
+          label: "Target",
+          data: targetLineData,
+          borderColor: "#d93025",
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          fill: false,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { top: 20 },
+      },
+      plugins: {
+        legend: { display: true, position: "top", labels: { font: { size: 10 }, boxWidth: 12 } },
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+
+  if (canvasId === "criticalChartAcc") criticalChartAcc = newChart;
+  else if (canvasId === "criticalChartBoiler") criticalChartBoiler = newChart;
+  else if (canvasId === "criticalChartPcp") criticalChartPcp = newChart;
+}
+
+function toggleCollapse(headerEl, bodyId){
+
+    const body = document.getElementById(bodyId);
+    const isOpen = body.classList.contains('open');
+
+    if(isOpen){
+        body.classList.remove('open');
+        headerEl.classList.remove('open');
+    } else {
+        body.classList.add('open');
+        headerEl.classList.add('open');
+
+        setTimeout(() => {
+            if(bodyId === 'critical-acc' && criticalChartAcc){ criticalChartAcc.resize(); }
+            if(bodyId === 'critical-boiler' && criticalChartBoiler){ criticalChartBoiler.resize(); }
+            if(bodyId === 'critical-pcp' && criticalChartPcp){ criticalChartPcp.resize(); }
+        }, 310);
+    }
+}
+
+let tonnageData = { 'Unit 1':[], 'Unit 2':[], 'Unit 3':[] };
+let targetsData = [];
+
+function formatPercent(pct){
+
+    if(pct === null || pct === undefined || pct === ''){
+        return '';
+    }
+
+    let num = pct;
+
+    if(typeof num === 'string'){
+        num = parseFloat(num.replace('%',''));
+    }
+
+    if(isNaN(num)){
+        return pct;
+    }
+
+    if(num <= 1){
+        num = num * 100;
+    }
+
+    return num.toFixed(1) + '%';
+}
+
+async function loadKpiDetails(){
+
+    try{
+
+        const workbook = await loadWorkbook(KPI_FILE_PATH);
+
+        const tonnageSheet = workbook.Sheets['Tonnage'];
+
+        if(tonnageSheet){
+
+            const rows = XLSX.utils.sheet_to_json(tonnageSheet);
+
+            tonnageData = { 'Unit 1':[], 'Unit 2':[], 'Unit 3':[] };
+
+            rows.forEach(r => {
+
+                const keys = Object.keys(r);
+                const unit = (r[keys[0]] || '').toString().trim();
+                const component = r[keys[1]];
+                const completed = r[keys[2]];
+                const total = r[keys[3]];
+                const pct = formatPercent(r[keys[4]]);
+
+                if(tonnageData[unit]){
+                    tonnageData[unit].push({component, completed, total, pct});
+                }
+            });
+        }
+
+        const targetSheet = workbook.Sheets['SepTargets'];
+
+        if(targetSheet){
+
+            const rows = XLSX.utils.sheet_to_json(targetSheet);
+
+            targetsData = rows.map(r => {
+                const keys = Object.keys(r);
+                return r[keys[1]];
+            });
+
+            renderTargets();
+        }
+
+    } catch(err){
+        console.error(err);
+        document.getElementById('targetList').innerHTML =
+            '<li class="target-item">Could not load "' + KPI_FILE_PATH + '"</li>';
+    }
+}
+
+function renderTargets(){
+
+    const list = document.getElementById('targetList');
+    list.innerHTML = '';
+
+    targetsData.forEach((target, idx) => {
+
+        const li = document.createElement('li');
+        li.className = 'target-item';
+
+        li.innerHTML = `
+            <span class="target-num">${idx+1}</span>
+            <span>${target}</span>
+        `;
+
+        list.appendChild(li);
+    });
+}
+
+function setupKpiTooltip(kpiId, unitName){
+
+    const card = document.getElementById(kpiId);
+
+    card.addEventListener('mouseenter', (e) => {
+        showKpiTooltip(e, unitName);
+    });
+
+    card.addEventListener('mousemove', (e) => {
+        moveKpiTooltip(e);
+    });
+
+    card.addEventListener('mouseleave', () => {
+        hideKpiTooltip();
+    });
+}
+
+function showKpiTooltip(e, unitName){
+
+    const tooltip = document.getElementById('kpiTooltip');
+    const details = tonnageData[unitName] || [];
+
+    if(details.length === 0){
+        tooltip.innerHTML = 'No tonnage details available for ' + unitName;
+    } else {
+
+        let rowsHtml = details.map(d =>
+            `<tr><td>${d.component}</td><td>${d.completed}</td><td>${d.total}</td><td>${d.pct}</td></tr>`
+        ).join('');
+
+        tooltip.innerHTML = `
+            <strong>${unitName} - Tonnage Details</strong>
+            <table>
+                <tr><th>Component</th><th>Done</th><th>Total</th><th>%</th></tr>
+                ${rowsHtml}
+            </table>
+        `;
+    }
+
+    tooltip.style.display = 'block';
+    moveKpiTooltip(e);
+}
+
+function moveKpiTooltip(e){
+    const tooltip = document.getElementById('kpiTooltip');
+    tooltip.style.left = (e.clientX + 15) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+}
+
+function hideKpiTooltip(){
+    document.getElementById('kpiTooltip').style.display = 'none';
+}
+
+setupKpiTooltip('kpi-unit1', 'Unit 1');
+setupKpiTooltip('kpi-unit2', 'Unit 2');
+setupKpiTooltip('kpi-unit3', 'Unit 3');
+
+let pdfDoc = null;
+let currentSlide = 1;
+let totalSlides = 0;
+let autoplayTimer = null;
+const AUTOPLAY_INTERVAL = 6000;
+
+if(window['pdfjsLib']){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+async function loadSlides(){
+
+    const caption = document.getElementById('carouselCaption');
+
+    try{
+
+        const loadingTask = pdfjsLib.getDocument(encodeURI(SLIDES_PDF_PATH) + '?t=' + Date.now());
+        pdfDoc = await loadingTask.promise;
+        totalSlides = pdfDoc.numPages;
+        currentSlide = 1;
+
+        buildDots();
+        await renderSlide(currentSlide);
+        startAutoplay();
+
+    } catch(err){
+        console.error(err);
+        caption.textContent = 'Could not load slides. Ensure "' + SLIDES_PDF_PATH + '" exists in the dashboard folder.';
+    }
+}
+
+function buildDots(){
+
+    const dotsContainer = document.getElementById('carouselDots');
+    dotsContainer.innerHTML = '';
+
+    for(let i = 1; i <= totalSlides; i++){
+
+        const dot = document.createElement('span');
+        dot.className = 'carousel-dot' + (i === currentSlide ? ' active' : '');
+        dot.onclick = () => {
+            currentSlide = i;
+            renderSlide(currentSlide);
+            resetAutoplay();
+        };
+
+        dotsContainer.appendChild(dot);
+    }
+}
+
+function updateDots(){
+
+    document.querySelectorAll('.carousel-dot').forEach((dot, idx) => {
+        dot.classList.toggle('active', (idx + 1) === currentSlide);
+    });
+}
+
+async function renderSlide(pageNum){
+
+    if(!pdfDoc){
+        return;
+    }
+
+    const page = await pdfDoc.getPage(pageNum);
+    const canvas = document.getElementById('slideCanvas');
+    const context = canvas.getContext('2d');
+
+    const viewport = page.getViewport({ scale: 1.4 });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+    document.getElementById('carouselCaption').textContent =
+        'Slide ' + pageNum + ' of ' + totalSlides;
+
+    updateDots();
+}
+
+function nextSlide(){
+
+    currentSlide = (currentSlide % totalSlides) + 1;
+    renderSlide(currentSlide);
+    resetAutoplay();
+}
+
+function prevSlide(){
+
+    currentSlide = (currentSlide - 2 + totalSlides) % totalSlides + 1;
+    renderSlide(currentSlide);
+    resetAutoplay();
+}
+
+function startAutoplay(){
+
+    if(autoplayTimer){
+        clearInterval(autoplayTimer);
+    }
+
+    autoplayTimer = setInterval(() => {
+        currentSlide = (currentSlide % totalSlides) + 1;
+        renderSlide(currentSlide);
+    }, AUTOPLAY_INTERVAL);
+}
+
+function resetAutoplay(){
+    startAutoplay();
+}
+
+document.getElementById('slidesSection').addEventListener('mouseenter', () => {
+    if(autoplayTimer){
+        clearInterval(autoplayTimer);
+    }
+});
+
+document.getElementById('slidesSection').addEventListener('mouseleave', () => {
+    startAutoplay();
+});
+
+function loadBoilerDuctStatus(workbook) {
+    const sheet = workbook.Sheets['Boiler duct status'];
+    const tbody = document.querySelector('#boilerDuctTable tbody');
+    if (!tbody) return;
+
+    if (!sheet) {
+        tbody.innerHTML = '<tr><td colspan="8">Boiler duct status sheet not found.</td></tr>';
+        return;
+    }
+
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const headerIdx = rawRows.findIndex(r => 
+        r && r.some(c => String(c).trim().toUpperCase() === 'CIRCUIT')
+    );
+
+    if (headerIdx === -1) {
+        tbody.innerHTML = '<tr><td colspan="8">Invalid boiler duct table format.</td></tr>';
+        return;
+    }
+
+    const dataRows = rawRows.slice(headerIdx + 1);
+    tbody.innerHTML = '';
+
+    dataRows.forEach(row => {
+        if (!row || row.length === 0) return;
+        const colCircuit = row[2] ? String(row[2]).trim() : '';
+        const colPgma = row[1] ? String(row[1]).trim() : '';
+        if (!colCircuit && !colPgma) return;
+
+        if (colCircuit === '-' || colPgma === '-') return;
+
+        const isTotal = colCircuit.toUpperCase().includes('TOTAL MODULE');
+        const isPercent = colCircuit.toUpperCase().includes('% OF WORK');
+
+        const tr = document.createElement('tr');
+        if (isTotal) tr.className = 'total-row';
+        if (isPercent) tr.className = 'percent-row';
+
+        const fmt = val => {
+            if (val === undefined || val === null || val === '') return '-';
+            if (typeof val === 'number') {
+                return Number.isInteger(val) ? val : val.toFixed(1);
+            }
+            return String(val).trim();
+        };
+
+        tr.innerHTML = `
+            <td>${isTotal || isPercent ? '' : fmt(row[0])}</td>
+            <td>${fmt(row[1])}</td>
+            <td class="text-left"><strong>${fmt(row[2])}</strong></td>
+            <td>${fmt(row[3])}</td>
+            <td>${fmt(row[4])}</td>
+            <td>${fmt(row[5])}</td>
+            <td>${fmt(row[6])}</td>
+            <td>${fmt(row[7])}</td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+loadDashboard();
+loadRecentPdfs();
+loadTasks();
+loadDailyUpdates();
+loadKpiDetails();
+loadSlides();
+loadCriticalAreas();
+loadCivilFoundations();
+
+setInterval(loadDashboard, 60000);
+setInterval(loadRecentPdfs, 60000);
+setInterval(loadTasks, 60000);
+setInterval(loadDailyUpdates, 60000);
+setInterval(loadKpiDetails, 60000);
+setInterval(loadCriticalAreas, 60000);
+
+</script>
+
+</body>
+</html>
