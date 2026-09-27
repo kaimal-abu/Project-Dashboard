@@ -1158,3 +1158,162 @@ canvas {
     border-bottom: 1px solid #eee;
     vertical-align: top;
 }
+
+/* ---------- 7-Day Graphic Timeline ---------- */
+.timeline-card {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    margin-top: 25px;
+    overflow-x: auto;
+}
+
+.timeline-card h2 {
+    color: #005a9c;
+    margin-top: 0;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timeline-card .week-range {
+    font-size: 13px;
+    color: #666;
+    font-weight: normal;
+}
+
+.timeline-track {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(170px, 1fr));
+    gap: 12px;
+    position: relative;
+    padding-top: 36px;
+}
+
+/* Continuous horizontal axis line */
+.timeline-track::before {
+    content: '';
+    position: absolute;
+    top: 48px;
+    left: 40px;
+    right: 40px;
+    height: 4px;
+    background: #0078D4;
+    border-radius: 2px;
+    z-index: 1;
+}
+
+.timeline-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+
+/* Date Node on the Line */
+.timeline-node {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #0078D4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 11px;
+    color: #0078D4;
+    margin-bottom: 8px;
+    transition: transform 0.2s;
+}
+
+.timeline-col.has-targets .timeline-node {
+    background: #0078D4;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(0, 120, 212, 0.25);
+}
+
+.timeline-col.today .timeline-node {
+    border-color: #ff6600;
+    background: #ff6600;
+    color: white;
+}
+
+.timeline-date-label {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #005a9c;
+    margin-bottom: 2px;
+}
+
+.timeline-day-sub {
+    font-size: 11px;
+    color: #777;
+    margin-bottom: 14px;
+}
+
+/* Vertical stem connector line */
+.timeline-stem {
+    width: 2px;
+    height: 18px;
+    background: #d0dceb;
+    margin-bottom: 6px;
+}
+
+.timeline-col.has-targets .timeline-stem {
+    background: #0078D4;
+}
+
+/* Target Cards Container */
+.timeline-targets-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timeline-target-item {
+    background: #f8fafc;
+    border-left: 4px solid #0078D4;
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    font-size: 11px;
+    transition: transform 0.15s ease;
+}
+
+.timeline-target-item:hover {
+    transform: translateY(-2px);
+    background: #f0f6ff;
+}
+
+.timeline-target-item.delayed {
+    border-left-color: #d93025;
+}
+
+.timeline-target-item.completed {
+    border-left-color: #28a745;
+}
+
+.timeline-dept-tag {
+    font-size: 10px;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    color: #334155;
+    display: inline-block;
+    margin-bottom: 4px;
+}
+
+.timeline-empty {
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+    padding: 8px 0;
+    font-style: italic;
+}

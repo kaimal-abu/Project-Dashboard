@@ -450,6 +450,16 @@ async function loadTasks(){
         renderCalendar();
         setupDeptWiseCommitments();
 
+	tasksLoaded = true;
+
+        renderCalendar();
+        setupDeptWiseCommitments();
+        renderWeeklyTimeline(); // <-- Automatically renders next 7 days with connecting lines
+
+        if(deptChartOpen){
+            renderDeptChart();
+        }
+
         if(deptChartOpen) renderDeptChart();
     } catch(err){
         console.error(err);
@@ -1125,6 +1135,76 @@ function loadBoilerDuctStatus(workbook) {
         `;
         tbody.appendChild(tr);
     });
+}
+
+/* ---------- 7-Day Graphic Timeline ---------- */
+function renderWeeklyTimeline() {
+    const track = document.getElementById('timelineTrack');
+    const rangeLabel = document.getElementById('timelineWeekRange');
+    if (!track) return;
+
+    // Build next 7 consecutive days starting from tomorrow (or today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        days.push(d);
+    }
+
+    if (rangeLabel) {
+        const dStart = days[0].toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        const dEnd = days[6].toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        rangeLabel.textContent = `${dStart} – ${dEnd}`;
+    }
+
+    const dayFormatter = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
+    const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' });
+
+    let html = '';
+
+    days.forEach((dateObj, idx) => {
+        const key = `${dateObj.getFullYear()}-${dateObj.getMonth() + 1}-${dateObj.getDate()}`;
+        const dayTasks = (taskMap && taskMap[key]) ? taskMap[key] : [];
+        const hasTargets = dayTasks.length > 0;
+        const isToday = idx === 0;
+
+        let targetsHtml = '';
+        if (hasTargets) {
+            targetsHtml = dayTasks.map(t => {
+                const statusClass = t.statusClass || 'pending';
+                // Pull department from rawTaskRows matching activity & date
+                const matched = rawTaskRows.find(r => r.date.getTime() === dateObj.getTime() && r.activity === t.activity);
+                const dept = matched ? matched.department : '';
+
+                return `
+                    <div class="timeline-target-item ${statusClass}">
+                        ${dept ? `<span class="timeline-dept-tag">${dept}</span>` : ''}
+                        <div style="font-weight:600; color:#1e293b; margin-bottom:3px;">${t.activity}</div>
+                        <span class="status-tag ${statusClass}">${t.status || 'Pending'}</span>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            targetsHtml = '<div class="timeline-empty">— No targets —</div>';
+        }
+
+        html += `
+            <div class="timeline-col ${hasTargets ? 'has-targets' : ''} ${isToday ? 'today' : ''}">
+                <div class="timeline-node">${dateObj.getDate()}</div>
+                <div class="timeline-date-label">${dateFormatter.format(dateObj)}</div>
+                <div class="timeline-day-sub">${dayFormatter.format(dateObj)}${isToday ? ' (Today)' : ''}</div>
+                <div class="timeline-stem"></div>
+                <div class="timeline-targets-wrap">
+                    ${targetsHtml}
+                </div>
+            </div>
+        `;
+    });
+
+    track.innerHTML = html;
 }
 
 /* ---------- Initialize Dashboard ---------- */
