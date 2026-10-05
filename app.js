@@ -115,7 +115,7 @@ function civilHtml(value) {
 }
 
 /* ---------- ACC 3 Progress Chart ---------- */
-async function loadACC(workbook){
+function loadACC(workbook){
     const sheet = workbook.Sheets['ACC 3'];
     if(!sheet) return;
 
@@ -132,25 +132,58 @@ async function loadACC(workbook){
 
     if(chartObj) chartObj.destroy();
 
-    chartObj = new Chart(document.getElementById('accChart'), {
+    const chartEl = document.getElementById('accChart');
+    if(!chartEl) return;
+
+    chartObj = new Chart(chartEl, {
         data:{
             labels: months,
             datasets:[
-                { type:'bar', label:'Manpower Deployed', data:manpower, backgroundColor:'#0078D4', yAxisID:'y' },
-                { type:'bar', label:'Monthly Erection Tonnage (MT)', data:monthlyTonnage, backgroundColor:'#82c4f0', yAxisID:'y1' },
-                { type:'line', label:'Cumulative Erection (MT)', data:cumulative, borderColor:'#ff6600', backgroundColor:'#ff6600', borderWidth:4, tension:0.3, yAxisID:'y1' }
+                {
+                    type:'bar',
+                    label:'Manpower Deployed',
+                    data:manpower,
+                    backgroundColor:'#0078D4',
+                    yAxisID:'y'
+                },
+                {
+                    type:'bar',
+                    label:'Monthly Erection Tonnage (MT)',
+                    data:monthlyTonnage,
+                    backgroundColor:'#82c4f0',
+                    yAxisID:'y1'
+                },
+                {
+                    type:'line',
+                    label:'Cumulative Erection (MT)',
+                    data:cumulative,
+                    borderColor:'#ff6600',
+                    backgroundColor:'#ff6600',
+                    borderWidth:4,
+                    tension:0.3,
+                    yAxisID:'y1'
+                }
             ]
         },
         options:{
             responsive:true,
             interaction:{ mode:'index' },
             scales:{
-                y:{ beginAtZero:true, title:{ display:true, text:'Manpower' } },
-                y1:{ position:'right', beginAtZero:true, grid:{ drawOnChartArea:false }, title:{ display:true, text:'Tonnage (MT)' } }
+                y:{
+                    beginAtZero:true,
+                    title:{ display:true, text:'Manpower' }
+                },
+                y1:{
+                    position:'right',
+                    beginAtZero:true,
+                    grid:{ drawOnChartArea:false },
+                    title:{ display:true, text:'Tonnage (MT)' }
+                }
             }
         }
     });
 }
+
 
 /* ---------- Manpower ---------- */
 function loadManpower(workbook){
@@ -303,7 +336,6 @@ async function loadDashboard(){
         loadMilestones(workbook);
         loadCapex(workbook);
         loadElectrical(workbook);
-        loadBoilerDuctStatus(workbook);
 
         document.getElementById('fileStatus').textContent = 'Data last refreshed at ' + new Date().toLocaleTimeString();
     } catch(err){
@@ -446,19 +478,12 @@ async function loadTasks(){
             taskMap[key].push({ activity: activity, status: statusRaw || '', statusClass: statusClass });
         });
 
-        tasksLoaded = true;
-        renderCalendar();
-        setupDeptWiseCommitments();
+	// <-- Initializes the slider range across all tasks & opens This Week
 
 	tasksLoaded = true;
-
         renderCalendar();
         setupDeptWiseCommitments();
-        renderWeeklyTimeline(); // <-- Automatically renders next 7 days with connecting lines
-
-        if(deptChartOpen){
-            renderDeptChart();
-        }
+        initTimelineBounds(); // <-- Initializes slider range and displays current week
 
         if(deptChartOpen) renderDeptChart();
     } catch(err){
@@ -729,61 +754,6 @@ function renderFilteredDeptTasks() {
     }).join('');
 }
 
-/* ---------- ACC PDF & Zoom Modal ---------- */
-async function loadAccPdf() {
-    const canvas = document.getElementById('accPdfCanvas');
-    const fallback = document.getElementById('accPdfFallback');
-    const wrapper = document.getElementById('accPdfWrapper');
-    if (!canvas) return;
-
-    try {
-        const loadingTask = pdfjsLib.getDocument(encodeURI(ACC_PDF_PATH) + '?t=' + Date.now());
-        accPdfDoc = await loadingTask.promise;
-        const page = await accPdfDoc.getPage(1);
-
-        const availableWidth = (wrapper ? wrapper.clientWidth : 0) || (canvas.parentElement ? canvas.parentElement.clientWidth : 0) || 480;
-        const unscaledViewport = page.getViewport({ scale: 1.0 });
-        const scale = availableWidth / unscaledViewport.width;
-        const viewport = page.getViewport({ scale: Math.max(scale, 0.4) });
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-        if (fallback) fallback.style.display = 'none';
-        canvas.style.display = 'block';
-    } catch (err) {
-        console.error("Failed to load ACC PDF:", err);
-        if (canvas) canvas.style.display = 'none';
-        if (fallback) fallback.style.display = 'block';
-    }
-}
-
-async function openAccZoomModal() {
-    const modal = document.getElementById('accZoomModal');
-    const zoomCanvas = document.getElementById('accZoomedCanvas');
-    if (!modal || !zoomCanvas || !accPdfDoc) return;
-
-    modal.classList.add('open');
-
-    try {
-        const page = await accPdfDoc.getPage(1);
-        const viewport = page.getViewport({ scale: 2.2 });
-        zoomCanvas.width = viewport.width;
-        zoomCanvas.height = viewport.height;
-        const ctx = zoomCanvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-    } catch (err) {
-        console.error("Zoom render failed:", err);
-    }
-}
-
-function closeAccZoomModal(e) {
-    if (e.target.id === 'accZoomModal' || e.target.classList.contains('modal-close-btn')) {
-        document.getElementById('accZoomModal').classList.remove('open');
-    }
-}
 
 /* ---------- Daily Major Updates ---------- */
 async function loadDailyUpdates(){
@@ -1092,65 +1062,109 @@ function resetAutoplay(){ startAutoplay(); }
 document.getElementById('slidesSection').addEventListener('mouseenter', () => { if(autoplayTimer) clearInterval(autoplayTimer); });
 document.getElementById('slidesSection').addEventListener('mouseleave', () => startAutoplay());
 
-/* ---------- Boiler Duct Status ---------- */
-function loadBoilerDuctStatus(workbook) {
-    const sheet = workbook.Sheets['Boiler duct status'];
-    const tbody = document.querySelector('#boilerDuctTable tbody');
-    if (!tbody) return;
-    if (!sheet) { tbody.innerHTML = '<tr><td colspan="8">Boiler duct status sheet not found.</td></tr>'; return; }
+/* ---------- Graphic Timeline with Slider & Navigation ---------- */
 
-    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const headerIdx = rawRows.findIndex(r => r && r.some(c => String(c).trim().toUpperCase() === 'CIRCUIT'));
-    if (headerIdx === -1) { tbody.innerHTML = '<tr><td colspan="8">Invalid boiler duct table format.</td></tr>'; return; }
+let timelineMinDate = null;
+let timelineMaxDate = null;
+let timelineCurrentStartDate = null;
 
-    tbody.innerHTML = '';
-    rawRows.slice(headerIdx + 1).forEach(row => {
-        if (!row || row.length === 0) return;
-        const colCircuit = row[2] ? String(row[2]).trim() : '';
-        const colPgma = row[1] ? String(row[1]).trim() : '';
-        if (!colCircuit && !colPgma) return;
-        if (colCircuit === '-' || colPgma === '-') return;
+function initTimelineBounds() {
+    if (!rawTaskRows || rawTaskRows.length === 0) return;
 
-        const isTotal = colCircuit.toUpperCase().includes('TOTAL MODULE');
-        const isPercent = colCircuit.toUpperCase().includes('% OF WORK');
-        const tr = document.createElement('tr');
-        if (isTotal) tr.className = 'total-row';
-        if (isPercent) tr.className = 'percent-row';
+    // Filter valid dates from all tasks
+    const validDates = rawTaskRows
+        .map(t => t.date)
+        .filter(d => d instanceof Date && !isNaN(d.getTime()))
+        .sort((a, b) => a - b);
 
-        const fmt = val => {
-            if (val === undefined || val === null || val === '') return '-';
-            if (typeof val === 'number') return Number.isInteger(val) ? val : val.toFixed(1);
-            return String(val).trim();
-        };
+    if (validDates.length === 0) return;
 
-        tr.innerHTML = `
-            <td>${isTotal || isPercent ? '' : fmt(row[0])}</td>
-            <td>${fmt(row[1])}</td>
-            <td class="text-left"><strong>${fmt(row[2])}</strong></td>
-            <td>${fmt(row[3])}</td>
-            <td>${fmt(row[4])}</td>
-            <td>${fmt(row[5])}</td>
-            <td>${fmt(row[6])}</td>
-            <td>${fmt(row[7])}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    // Start from the earliest task date
+    timelineMinDate = new Date(validDates[0].getFullYear(), validDates[0].getMonth(), validDates[0].getDate());
+    
+    // Cap the upper bound strictly to 31 March 2027
+    timelineMaxDate = new Date(2027, 2, 31); // Month index 2 = March
+
+    // Update Slider UI attributes
+    const slider = document.getElementById('timelineDateSlider');
+    const minLabel = document.getElementById('sliderMinLabel');
+    const maxLabel = document.getElementById('sliderMaxLabel');
+
+    const totalDays = Math.max(7, Math.round((timelineMaxDate - timelineMinDate) / (1000 * 60 * 60 * 24)));
+
+    if (slider) {
+        slider.min = 0;
+        slider.max = totalDays;
+    }
+    if (minLabel) minLabel.textContent = timelineMinDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
+    if (maxLabel) maxLabel.textContent = "Mar '27"; // Labels the end of the slider cleanly
+
+    // Set Default: This Week (starting Monday)
+    resetTimelineToThisWeek();
 }
 
-/* ---------- 7-Day Graphic Timeline ---------- */
-function renderWeeklyTimeline() {
-    const track = document.getElementById('timelineTrack');
-    const rangeLabel = document.getElementById('timelineWeekRange');
-    if (!track) return;
-
-    // Build next 7 consecutive days starting from tomorrow (or today)
+function resetTimelineToThisWeek() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Find Monday of the current week
+    const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+    const monday = new Date(today);
+    monday.setDate(diff);
+
+    setTimelineStartDate(monday);
+}
+
+function setTimelineStartDate(startDate) {
+    if (!timelineMinDate || !timelineMaxDate) return;
+
+    // Cap the maximum start date so the 7-day view finishes by 31 Mar 2027
+    const maxStartDate = new Date(timelineMaxDate);
+    maxStartDate.setDate(maxStartDate.getDate() - 6);
+
+    if (startDate < timelineMinDate) startDate = new Date(timelineMinDate);
+    if (startDate > maxStartDate) startDate = new Date(maxStartDate);
+
+    timelineCurrentStartDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+
+    // Sync Slider knob position
+    const slider = document.getElementById('timelineDateSlider');
+    if (slider) {
+        const offsetDays = Math.round((timelineCurrentStartDate - timelineMinDate) / (1000 * 60 * 60 * 24));
+        slider.value = Math.max(0, Math.min(parseInt(slider.max, 10), offsetDays));
+    }
+
+    renderTimelineView();
+}
+
+function onTimelineSliderChange(dayOffset) {
+    if (!timelineMinDate) return;
+    const newDate = new Date(timelineMinDate);
+    newDate.setDate(timelineMinDate.getDate() + parseInt(dayOffset, 10));
+    timelineCurrentStartDate = newDate;
+    renderTimelineView();
+}
+
+function shiftTimelineDays(deltaDays) {
+    if (!timelineCurrentStartDate) {
+        resetTimelineToThisWeek();
+    }
+    const newDate = new Date(timelineCurrentStartDate);
+    newDate.setDate(newDate.getDate() + deltaDays);
+    setTimelineStartDate(newDate);
+}
+
+function renderTimelineView() {
+    const track = document.getElementById('timelineTrack');
+    const rangeLabel = document.getElementById('timelineWeekRange');
+    if (!track || !timelineCurrentStartDate) return;
+
+    // Build the 7 days starting from current date
     const days = [];
     for (let i = 0; i < 7; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() + i);
+        const d = new Date(timelineCurrentStartDate);
+        d.setDate(timelineCurrentStartDate.getDate() + i);
         days.push(d);
     }
 
@@ -1163,19 +1177,21 @@ function renderWeeklyTimeline() {
     const dayFormatter = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
     const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short' });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     let html = '';
 
-    days.forEach((dateObj, idx) => {
+    days.forEach(dateObj => {
         const key = `${dateObj.getFullYear()}-${dateObj.getMonth() + 1}-${dateObj.getDate()}`;
         const dayTasks = (taskMap && taskMap[key]) ? taskMap[key] : [];
         const hasTargets = dayTasks.length > 0;
-        const isToday = idx === 0;
+        const isToday = (dateObj.getTime() === today.getTime());
 
         let targetsHtml = '';
         if (hasTargets) {
             targetsHtml = dayTasks.map(t => {
                 const statusClass = t.statusClass || 'pending';
-                // Pull department from rawTaskRows matching activity & date
                 const matched = rawTaskRows.find(r => r.date.getTime() === dateObj.getTime() && r.activity === t.activity);
                 const dept = matched ? matched.department : '';
 
@@ -1207,6 +1223,7 @@ function renderWeeklyTimeline() {
     track.innerHTML = html;
 }
 
+
 /* ---------- Initialize Dashboard ---------- */
 loadDashboard();
 loadRecentPdfs();
@@ -1216,7 +1233,6 @@ loadKpiDetails();
 loadSlides();
 loadCriticalAreas();
 loadCivilFoundations();
-loadAccPdf();
 
 setInterval(loadDashboard, 60000);
 setInterval(loadRecentPdfs, 60000);

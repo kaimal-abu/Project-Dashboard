@@ -40,7 +40,7 @@
     <!-- Row: Targets & Financial -->
     <div class="split-row-50">
         <div class="half-col">
-            <h2>September Targets</h2>
+            <h2>October Targets</h2>
             <ul class="target-list" id="targetList">
                 <li class="target-item">Loading...</li>
             </ul>
@@ -59,7 +59,7 @@
                 </div>
                 <div class="fin-item accrual">
                     <div class="fin-label">Accrual Capex</div>
-                    <div class="fin-value">&#8377;19,405 Cr</div>
+                    <div class="fin-value">&#8377;19,423 Cr</div>
                 </div>
             </div>
             <div class="capex-chart-wrap">
@@ -85,17 +85,42 @@
         <div class="carousel-caption" id="carouselCaption">Loading slides...</div>
     </div>
 
-<!-- Graphic Timeline: Next 7 Days Targets -->
+<!-- Graphic Timeline with Slider -->
 <div class="timeline-card">
-    <h2>
-        <span>🗓️ This Week's Target Timeline</span>
-        <span class="week-range" id="timelineWeekRange">Next 7 Days</span>
-    </h2>
+    <div class="timeline-header-wrap">
+        <h2>
+            <span>🗓️ Target Timeline</span>
+            <span class="week-range" id="timelineWeekRange">Loading...</span>
+        </h2>
+        <div class="timeline-controls">
+            <button class="timeline-nav-btn" onclick="shiftTimelineDays(-7)" title="Previous 7 Days">&#8592; Prev Week</button>
+            <button class="timeline-nav-btn" onclick="shiftTimelineDays(-1)" title="Previous Day">&#8249;</button>
+            <button class="timeline-nav-btn highlight" onclick="resetTimelineToThisWeek()" title="Reset to current week">This Week</button>
+            <button class="timeline-nav-btn" onclick="shiftTimelineDays(1)" title="Next Day">&#8250;</button>
+            <button class="timeline-nav-btn" onclick="shiftTimelineDays(7)" title="Next 7 Days">Next Week &#8594;</button>
+        </div>
+    </div>
+
+    <!-- Timeline Slider Bar -->
+    <div class="timeline-slider-wrap">
+        <span class="slider-boundary-label" id="sliderMinLabel">Start</span>
+        <input 
+            type="range" 
+            id="timelineDateSlider" 
+            min="0" 
+            max="100" 
+            value="0" 
+            step="1" 
+            oninput="onTimelineSliderChange(this.value)"
+        />
+        <span class="slider-boundary-label" id="sliderMaxLabel">End</span>
+    </div>
+
+    <!-- Track Grid for 7 consecutive days starting at slider position -->
     <div class="timeline-track" id="timelineTrack">
         <div class="timeline-empty">Loading weekly timeline...</div>
     </div>
 </div>
-
     <!-- Section: Critical Areas -->
     <div class="critical-areas-wrap" id="criticalAreasWrap">
         <div class="collapse-card">
@@ -283,7 +308,7 @@
         </div>
     </div>
 
-    <!-- Row: Chimney & Boiler Duct -->
+   <!-- 50% ROW: Chimney Status & Department Tasks -->
     <div class="split-row-50">
         <div class="half-col">
             <h2>Chimney Status</h2>
@@ -305,35 +330,6 @@
         </div>
 
         <div class="half-col">
-            <h2>Boiler Duct Status</h2>
-            <div class="boiler-duct-table-wrap">
-                <table class="boiler-duct-table" id="boilerDuctTable">
-                    <thead>
-                        <tr><th>Sl No</th><th>PGMA</th><th>Circuit</th><th>Total Mod</th><th>Pre Assy</th><th>Bal Assy</th><th>Erection</th><th>Bal Ern</th></tr>
-                    </thead>
-                    <tbody><tr><td colspan="8">Loading boiler duct data...</td></tr></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Row: 50/50 ACC PDF & Department Tasks -->
-    <div class="acc-dept-row-50">
-        <div class="half-col">
-            <h2>ACC Unit-3 Progress</h2>
-            <div style="text-align: center; padding: 10px 0;">
-                <div id="accPdfWrapper" style="cursor: zoom-in;" onclick="openAccZoomModal()">
-                    <canvas id="accPdfCanvas" class="acc-modal-trigger"></canvas>
-                </div>
-                <div id="accPdfFallback" style="display:none; padding:35px 20px; background:#f8fafc; border:1px dashed #0078D4; border-radius:10px;">
-                    <p style="color:#005a9c; font-weight:600; margin-bottom:6px;">Could not load "acc_unit3_progress.pdf"</p>
-                    <small style="color:#666;">Ensure <code>acc_unit3_progress.pdf</code> is in the dashboard folder.</small>
-                </div>
-                <div class="acc-img-caption">&#128269; Click drawing to zoom in</div>
-            </div>
-        </div>
-
-        <div class="half-col">
             <h2>Department Tasks & Status</h2>
             <div class="dept-tabs-container" id="deptTabsContainer"></div>
             <div class="month-tabs-container" id="monthTabsContainer"></div>
@@ -348,13 +344,6 @@
         </div>
     </div>
 
-    <!-- Zoom Modal -->
-    <div id="accZoomModal" class="image-modal-overlay" onclick="closeAccZoomModal(event)">
-        <span class="modal-close-btn" onclick="closeAccZoomModal(event)">&times;</span>
-        <div style="max-width: 95%; max-height: 92vh; overflow: auto; background: white; border-radius: 8px; padding: 10px;">
-            <canvas id="accZoomedCanvas"></canvas>
-        </div>
-    </div>
 
     <!-- Custom Script File -->
     <script src="app.js"></script>
