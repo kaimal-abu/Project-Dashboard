@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=progress-ma-20261017">
 </head>
 <body>
 
@@ -122,43 +122,68 @@
     </div>
 </div>
     <!-- Section: Critical Areas -->
-    <div class="critical-areas-wrap" id="criticalAreasWrap">
+    <div class="critical-areas-wrap progress-critical-grid" id="criticalAreasWrap">
         <div class="collapse-card">
-            <button class="collapse-header" onclick="toggleCollapse(this, 'critical-acc')">
+            <button class="collapse-header open" onclick="toggleCollapse(this, 'critical-boiler')" aria-label="Toggle Boiler Joints chart">
                 <div class="collapse-header-top">
-                    <h3>ACC</h3>
-                    <span class="collapse-chevron">&#9662;</span>
-                </div>
-                <span class="critical-target-badge" id="target-badge-acc"></span>
-            </button>
-            <div class="collapse-body" id="critical-acc">
-                <div class="critical-chart-container"><canvas id="criticalChartAcc"></canvas></div>
-            </div>
-        </div>
-
-        <div class="collapse-card">
-            <button class="collapse-header" onclick="toggleCollapse(this, 'critical-boiler')">
-                <div class="collapse-header-top">
-                    <h3>Boiler - NDHT Joints</h3>
+                    <h3>Boiler Joints</h3>
                     <span class="collapse-chevron">&#9662;</span>
                 </div>
                 <span class="critical-target-badge" id="target-badge-boiler"></span>
             </button>
-            <div class="collapse-body" id="critical-boiler">
-                <div class="critical-chart-container"><canvas id="criticalChartBoiler"></canvas></div>
+            <div class="progress-summary" id="progress-summary-boiler" aria-live="polite">Loading scope and balance...</div>
+            <div class="progress-caption" id="progress-caption-boiler"></div>
+            <div class="collapse-body open" id="critical-boiler">
+                <div class="critical-chart-container"><canvas id="criticalChartBoiler" role="img" aria-label="Boiler Joints: daily actual and seven-day moving average"></canvas></div>
+                <div class="progress-average-note" id="progress-note-boiler"></div>
             </div>
         </div>
 
         <div class="collapse-card">
-            <button class="collapse-header" onclick="toggleCollapse(this, 'critical-pcp')">
+            <button class="collapse-header open" onclick="toggleCollapse(this, 'critical-acc')" aria-label="Toggle ACC Tonnage chart">
                 <div class="collapse-header-top">
-                    <h3>PCP</h3>
+                    <h3>ACC Tonnage</h3>
+                    <span class="collapse-chevron">&#9662;</span>
+                </div>
+                <span class="critical-target-badge" id="target-badge-acc"></span>
+            </button>
+            <div class="progress-summary" id="progress-summary-acc" aria-live="polite">Loading scope and balance...</div>
+            <div class="progress-caption" id="progress-caption-acc"></div>
+            <div class="collapse-body open" id="critical-acc">
+                <div class="critical-chart-container"><canvas id="criticalChartAcc" role="img" aria-label="ACC Tonnage: daily actual and seven-day moving average"></canvas></div>
+                <div class="progress-average-note" id="progress-note-acc"></div>
+            </div>
+        </div>
+
+        <div class="collapse-card">
+            <button class="collapse-header open" onclick="toggleCollapse(this, 'critical-duct')" aria-label="Toggle Duct Tonnage chart">
+                <div class="collapse-header-top">
+                    <h3>Duct Tonnage</h3>
+                    <span class="collapse-chevron">&#9662;</span>
+                </div>
+                <span class="critical-target-badge" id="target-badge-duct"></span>
+            </button>
+            <div class="progress-summary" id="progress-summary-duct" aria-live="polite">Loading scope and balance...</div>
+            <div class="progress-caption" id="progress-caption-duct"></div>
+            <div class="collapse-body open" id="critical-duct">
+                <div class="critical-chart-container"><canvas id="criticalChartDuct" role="img" aria-label="Duct Tonnage: daily actual and seven-day moving average"></canvas></div>
+                <div class="progress-average-note" id="progress-note-duct"></div>
+            </div>
+        </div>
+
+        <div class="collapse-card">
+            <button class="collapse-header open" onclick="toggleCollapse(this, 'critical-pcp')" aria-label="Toggle P92 Joints chart">
+                <div class="collapse-header-top">
+                    <h3>P92 Joints</h3>
                     <span class="collapse-chevron">&#9662;</span>
                 </div>
                 <span class="critical-target-badge" id="target-badge-pcp"></span>
             </button>
-            <div class="collapse-body" id="critical-pcp">
-                <div class="critical-chart-container"><canvas id="criticalChartPcp"></canvas></div>
+            <div class="progress-summary" id="progress-summary-pcp" aria-live="polite">Loading scope and balance...</div>
+            <div class="progress-caption" id="progress-caption-pcp"></div>
+            <div class="collapse-body open" id="critical-pcp">
+                <div class="critical-chart-container"><canvas id="criticalChartPcp" role="img" aria-label="P92 Joints: daily actual and seven-day moving average"></canvas></div>
+                <div class="progress-average-note" id="progress-note-pcp"></div>
             </div>
         </div>
     </div>
@@ -346,6 +371,6 @@
 
 
     <!-- Custom Script File -->
-    <script src="app.js"></script>
+    <script src="app.js?v=progress-ma-20261017"></script>
 </body>
 </html>

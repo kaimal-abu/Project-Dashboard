@@ -3,6 +3,7 @@ let capexChartObj = null;
 let criticalChartAcc = null;
 let criticalChartBoiler = null;
 let criticalChartPcp = null;
+let criticalChartDuct = null;
 let deptChartObj = null;
 let deptChartOpen = false;
 let rawTaskRows = [];
@@ -798,44 +799,189 @@ async function loadDailyUpdates(){
 }
 
 /* ---------- Critical Areas ---------- */
-async function loadCriticalAreas() {
-  try {
-    const workbook = await loadWorkbook(UPDATES_FILE_PATH);
-    const sheet = workbook.Sheets["Critical areas"];
-    if (!sheet) return;
+const progressChartSpecs = [
+  {key: 'Boiler', title: 'Boiler Joints', id: 'Boiler', slug: 'boiler', color: '#ff6600', unit: 'joints'},
+  {key: 'ACC', title: 'ACC Tonnage', id: 'Acc', slug: 'acc', color: '#0078D4', unit: 'MT'},
+  {key: 'Duct', title: 'Duct Tonnage', id: 'Duct', slug: 'duct', color: '#00897b', unit: 'MT'},
+  {key: 'P92', title: 'P92 Joints', id: 'Pcp', slug: 'pcp', color: '#28a745', unit: 'joints'}
+];
+const progressChartInstances = {};
+const progressScopes = { ACC: 10800, Duct: 4500 };
 
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (rows.length < 2) return;
-
-    const colNames = rows[0].slice(1);
-    let targets = [null, null, null];
-    const dailyRows = [];
-
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      if (!row || row[0] === undefined || row[0] === null) continue;
-      const firstCell = row[0].toString().trim().toLowerCase();
-
-      if (firstCell.includes("target")) {
-        targets = [row[1], row[2], row[3]];
-        continue;
-      }
-      const dateObj = parseAnyDate(row[0]);
-      if (!isNaN(dateObj)) dailyRows.push({ date: dateObj, values: [row[1], row[2], row[3]] });
+function progressNumber(value) {
+  if (value === null || value === undefined || typeof value === 'boolean' || String(value).trim() === '') return null;
+  const parsed = Number(String(value).replace(/,/g, '').trim());
+  return Number.isFinite(parsed) ? parsed : null;
+}
+function progressFmt(value) {
+  return value === null || value === undefined ? 'N/A' : Number(value).toLocaleString('en-IN', {maximumFractionDigits: 1});
+}
+function progressDay(raw) {
+  if (raw === null || raw === undefined || raw === '' || typeof raw === 'boolean') return null;
+  let d;
+  if (raw instanceof Date) {
+    d = new Date(raw.getFullYear(), raw.getMonth(), raw.getDate());
+  } else if (typeof raw === 'number') {
+    const p = XLSX.SSF.parse_date_code(raw);
+    if (!p) return null;
+    d = new Date(p.y, p.m - 1, p.d);
+  } else {
+    const s = String(raw).trim();
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|[T\s])/);
+    const local = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2}|\d{4})$/);
+    if (iso || local) {
+      let y = Number(iso ? iso[1] : local[3]);
+      if (y < 100) y += y <= 49 ? 2000 : 1900;
+      const m = Number(iso ? iso[2] : local[2]);
+      const day = Number(iso ? iso[3] : local[1]);
+      d = new Date(y, m - 1, day);
+      if (d.getFullYear() !== y || d.getMonth() !== m - 1 || d.getDate() !== day) return null;
+    } else {
+      d = parseAnyDate(raw);
     }
-
-    dailyRows.sort((a, b) => a.date - b.date);
-    const last7 = dailyRows.slice(-7);
-    const labels = last7.map((r) => r.date.getDate() + "/" + (r.date.getMonth() + 1));
-
-    renderCriticalChart("criticalChartAcc", labels, last7.map((r) => r.values[0] || 0), targets[0], "#0078D4", "target-badge-acc", colNames[0] || "ACC");
-    renderCriticalChart("criticalChartBoiler", labels, last7.map((r) => r.values[1] || 0), targets[1], "#ff6600", "target-badge-boiler", colNames[1] || "Boiler");
-    renderCriticalChart("criticalChartPcp", labels, last7.map((r) => r.values[2] || 0), targets[2], "#28a745", "target-badge-pcp", colNames[2] || "PCP");
-  } catch (err) {
-    console.error(err);
   }
+  return d && !isNaN(d.getTime()) ? new Date(d.getFullYear(), d.getMonth(), d.getDate()) : null;
+}
+function progressShift(day, offset) {
+  const d = new Date(day);
+  d.setDate(d.getDate() + offset);
+  return d;
+}
+function progressDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function progressDateLabel(d) {
+  return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+}
+function progressMovingAverage(series, dates) {
+  return dates.map(day => {
+    const records = [];
+    for (let i=0; i<7; i++) {
+      const v = series.get(progressDateKey(progressShift(day, -i)));
+      if (v !== undefined && v !== null) records.push(v);
+    }
+    return {value: records.length ? records.reduce((a,b)=>a+b,0)/records.length : null, count:records.length};
+  });
+}
+function progressReadStatus(workbook, today) {
+  const sheet = workbook.Sheets['Joints'];
+  const rows = sheet ? XLSX.utils.sheet_to_json(sheet, {header:1, defval:null}) : [];
+  if (!rows.length) return {values:{}, date:null};
+  const headers = rows[0].map(v => String(v ?? '').trim().toUpperCase());
+  const stat = {};
+  let snapshotDate = null;
+  rows.slice(1).forEach(row => {
+    const label = String(row[0] ?? '').trim().toLowerCase();
+    if (['total','completed','balance'].includes(label)) {
+      stat[label] = row;
+    } else {
+      const d = progressDay(row[0]);
+      if (d && d <= today && (!snapshotDate || d > snapshotDate)) snapshotDate = d;
+    }
+  });
+  function one(name) {
+    const idx = name === 'DUCT' ? headers.findIndex(h=>h.includes('DUCT')) : headers.indexOf(name);
+    if (idx < 0) return {total:name==='DUCT'?progressScopes.Duct:null, completed:null, balance:null};
+    let total = progressNumber((stat.total || [])[idx]);
+    let completed = progressNumber((stat.completed || [])[idx]);
+    let balance = progressNumber((stat.balance || [])[idx]);
+    if (name==='DUCT' && total===null) total=progressScopes.Duct;
+    if (total===null && completed!==null && balance!==null) total=completed+balance;
+    if (completed===null && total!==null && balance!==null) completed=total-balance;
+    if (balance===null && total!==null && completed!==null) balance=total-completed;
+    const warning = [total,completed,balance].some(v=>v!==null && v<0) ||
+      (total!==null && completed!==null && balance!==null && Math.abs(total-completed-balance)>0.01);
+    return {total,completed,balance,warning};
+  }
+  function sum(names) {
+    const parts=names.map(one);
+    const result={warning:parts.some(v=>v.warning)};
+    ['total','completed','balance'].forEach(field=>{
+      result[field]=parts.every(v=>v[field]!==null) ? parts.reduce((s,v)=>s+v[field],0) : null;
+    });
+    return result;
+  }
+  return {values:{Boiler:sum(['SH','RH']), P92:sum(['MS','HRH','HPBP','LPBP']), Duct:one('DUCT')}, date:snapshotDate};
+}
+function progressAccStatus(workbook, today) {
+  const sheet=workbook.Sheets['Updates'];
+  const rows=sheet ? XLSX.utils.sheet_to_json(sheet,{header:1,defval:null}) : [];
+  let best=null;
+  rows.slice(1).forEach(row=>{
+    const d=progressDay(row[0]);
+    if (!d || d>today || String(row[1] ?? '').trim().toLowerCase()!=='acc') return;
+    const m=String(row[2] ?? '').match(/\btotal\s*[-:]\s*([0-9][0-9,]*(?:\.[0-9]+)?)/i);
+    if(m && (!best || d>=best.date)) best={date:d, completed:progressNumber(m[1])};
+  });
+  const completed=best ? best.completed : null;
+  return {total:progressScopes.ACC, completed, balance:completed===null?null:progressScopes.ACC-completed, date:best?best.date:null};
 }
 
+async function loadCriticalAreas() {
+  try {
+    const workbook=await loadWorkbook(UPDATES_FILE_PATH);
+    const sheet=workbook.Sheets['Critical areas'];
+    if(!sheet) throw new Error('Critical areas sheet not found');
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});
+    if(rows.length<2) throw new Error('Critical areas sheet is empty');
+    const headers=rows[0].map(v=>String(v ?? '').trim().toLowerCase());
+    const dateCol=headers.indexOf('date');
+    if(dateCol<0) throw new Error('Critical areas Date column not found');
+    const columns={
+      Boiler:headers.findIndex(h=>h.includes('boiler') && h.includes('ndht')),
+      ACC:headers.indexOf('acc'),
+      P92:3,
+      Duct:headers.findIndex(h=>h.includes('duct'))
+    };
+    if(columns.Duct<0 && headers.length>4) columns.Duct=4;
+    if(columns.Boiler<0 || columns.ACC<0 || headers.length<4) throw new Error('Boiler, ACC or P92 column missing');
+    const series={}, targets={};
+    progressChartSpecs.forEach(s=>{series[s.key]=new Map(); targets[s.key]=null;});
+    const today=new Date(); today.setHours(0,0,0,0);
+    let anchor=null;
+    rows.slice(1).forEach(row=>{
+      const first=String(row[0] ?? '').trim().toLowerCase();
+      if(first==='daily target') {
+        progressChartSpecs.forEach(s=>{targets[s.key]=columns[s.key]<0?null:progressNumber(row[columns[s.key]]);});
+        return;
+      }
+      const d=progressDay(row[dateCol]);
+      if(!d || d>today) return;
+      if(!anchor || d>anchor) anchor=d;
+      progressChartSpecs.forEach(s=>{
+        if(columns[s.key]<0) return;
+        const v=progressNumber(row[columns[s.key]]);
+        if(v!==null) series[s.key].set(progressDateKey(d),v);
+      });
+    });
+    if(!anchor) throw new Error('No current dated progress records');
+    const dates=Array.from({length:7},(_,i)=>progressShift(anchor,i-6));
+    const joint=progressReadStatus(workbook,today);
+    const statuses={...joint.values, ACC:progressAccStatus(workbook,today)};
+    progressChartSpecs.forEach(spec=>{
+      const status=statuses[spec.key] || {total:null,balance:null};
+      const statusDate=spec.key==='ACC'?status.date:joint.date;
+      const summary=document.getElementById('progress-summary-'+spec.slug);
+      if(summary) summary.textContent=`Total Scope: ${progressFmt(status.total)} ${spec.unit} | Balance: ${progressFmt(status.balance)} ${spec.unit}`;
+      const caption=document.getElementById('progress-caption-'+spec.slug);
+      if(caption) caption.textContent=`Daily data: ${progressDateLabel(anchor)}`+
+        (statusDate && progressDateKey(statusDate)!==progressDateKey(anchor)?` | Status: ${progressDateLabel(statusDate)}`:'')+
+        (status.warning?' | Check Joints status totals':'');
+      const avgs=progressMovingAverage(series[spec.key],dates);
+      const note=document.getElementById('progress-note-'+spec.slug);
+      if(note) note.textContent=avgs.some(v=>v.count<7)?'7-day average uses recorded values; blank days are not treated as zero.':'Moving average includes the current day and the preceding six calendar days.';
+      const badge=document.getElementById('target-badge-'+spec.slug);
+      if(badge) badge.textContent=`Daily target: ${progressFmt(targets[spec.key])} ${spec.unit}`;
+      renderCriticalChart(spec, dates.map(d=>`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`), dates.map(d=>series[spec.key].get(progressDateKey(d)) ?? null), avgs, targets[spec.key]);
+    });
+  } catch(err) {
+    console.error('Progress charts:',err);
+    progressChartSpecs.forEach(spec=>{
+      const summary=document.getElementById('progress-summary-'+spec.slug);
+      if(summary) summary.textContent='Could not load progress data: '+err.message;
+    });
+  }
+}
 const barValueLabelPlugin = {
   id: "barValueLabelPlugin",
   afterDatasetsDraw(chart) {
@@ -851,7 +997,7 @@ const barValueLabelPlugin = {
         ctx.font = "bold 11px Segoe UI, Arial, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillText(value, bar.x, bar.y - 4);
+        ctx.fillText(chart.canvas.id.startsWith('criticalChart') ? progressFmt(value) : value, bar.x, bar.y - 4);
         ctx.restore();
       });
     });
@@ -859,36 +1005,39 @@ const barValueLabelPlugin = {
 };
 Chart.register(barValueLabelPlugin);
 
-function renderCriticalChart(canvasId, labels, values, target, barColor, badgeId, seriesLabel) {
-  const badge = document.getElementById(badgeId);
-  if (badge) badge.textContent = "Target: " + (target !== null ? target : "N/A");
-
-  if (canvasId === "criticalChartAcc" && criticalChartAcc) criticalChartAcc.destroy();
-  else if (canvasId === "criticalChartBoiler" && criticalChartBoiler) criticalChartBoiler.destroy();
-  else if (canvasId === "criticalChartPcp" && criticalChartPcp) criticalChartPcp.destroy();
-
-  const targetLineData = target !== null ? labels.map(() => target) : [];
-
-  const newChart = new Chart(document.getElementById(canvasId), {
-    data: {
-      labels: labels,
-      datasets: [
-        { type: "bar", label: seriesLabel + " - Daily", data: values, backgroundColor: barColor, borderRadius: 4, order: 2 },
-        { type: "line", label: "Target", data: targetLineData, borderColor: "#d93025", borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false, order: 1 }
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: { padding: { top: 20 } },
-      plugins: { legend: { display: true, position: "top", labels: { font: { size: 10 }, boxWidth: 12 } } },
-      scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } }
-    },
+function renderCriticalChart(spec, labels, values, averages, target) {
+  const canvas=document.getElementById('criticalChart'+spec.id);
+  if(!canvas) return;
+  const previous=progressChartInstances[spec.key] || Chart.getChart(canvas);
+  if(previous) previous.destroy();
+  const incomplete=averages.some(v=>v.count<7);
+  const datasets=[
+    {type:'bar',label:'Daily actual',data:values,backgroundColor:spec.color,borderRadius:4,order:3},
+    {type:'line',label:incomplete?'7D moving avg (recorded)':'7-day moving average',data:averages.map(v=>v.value),borderColor:'#17365d',backgroundColor:'#17365d',borderWidth:2.2,pointRadius:3,pointHoverRadius:5,fill:false,spanGaps:false,tension:0,order:1}
+  ];
+  if(target!==null) datasets.push({type:'line',label:'Daily target: '+progressFmt(target),data:labels.map(()=>target),borderColor:'#d93025',borderWidth:1.8,borderDash:[6,4],pointRadius:0,fill:false,order:2});
+  const maxValue=Math.max(1,...values.filter(v=>v!==null),...averages.map(v=>v.value).filter(v=>v!==null),target ?? 0);
+  const chart=new Chart(canvas,{
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:12,right:4}},
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:16}},
+        tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${progressFmt(ctx.parsed.y)} ${spec.unit}`}}
+      },
+      scales:{
+        y:{beginAtZero:true,suggestedMax:maxValue*1.25,title:{display:true,text:spec.unit},ticks:{font:{size:10},...(spec.unit==='joints'?{precision:0}:{})}},
+        x:{ticks:{font:{size:10}}}
+      }
+    }
   });
-
-  if (canvasId === "criticalChartAcc") criticalChartAcc = newChart;
-  else if (canvasId === "criticalChartBoiler") criticalChartBoiler = newChart;
-  else if (canvasId === "criticalChartPcp") criticalChartPcp = newChart;
+  progressChartInstances[spec.key]=chart;
+  if(spec.key==='ACC') criticalChartAcc=chart;
+  if(spec.key==='Boiler') criticalChartBoiler=chart;
+  if(spec.key==='P92') criticalChartPcp=chart;
+  if(spec.key==='Duct') criticalChartDuct=chart;
 }
 
 function toggleCollapse(headerEl, bodyId){
@@ -905,6 +1054,7 @@ function toggleCollapse(headerEl, bodyId){
             if(bodyId === 'critical-acc' && criticalChartAcc) criticalChartAcc.resize();
             if(bodyId === 'critical-boiler' && criticalChartBoiler) criticalChartBoiler.resize();
             if(bodyId === 'critical-pcp' && criticalChartPcp) criticalChartPcp.resize();
+            if(bodyId === 'critical-duct' && criticalChartDuct) criticalChartDuct.resize();
         }, 310);
     }
 }
@@ -1233,6 +1383,7 @@ loadKpiDetails();
 loadSlides();
 loadCriticalAreas();
 loadCivilFoundations();
+
 
 setInterval(loadDashboard, 60000);
 setInterval(loadRecentPdfs, 60000);

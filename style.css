@@ -1398,3 +1398,61 @@ canvas {
     cursor: pointer;
     accent-color: #0078D4;
 }
+
+
+
+/* Daily progress cards: scoped to preserve other dashboard layouts. */
+#criticalAreasWrap.progress-critical-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+#criticalAreasWrap.progress-critical-grid > .collapse-card {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+#criticalAreasWrap.progress-critical-grid .collapse-header h3 {
+    font-size: 17px;
+}
+#criticalAreasWrap.progress-critical-grid .progress-summary {
+    margin: 0 16px 5px;
+    padding: 10px 12px;
+    background: #edf5ff;
+    color: #005a9c;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+#criticalAreasWrap.progress-critical-grid .progress-caption {
+    margin: 0 16px 10px;
+    color: #666;
+    font-size: 11px;
+    min-height: 16px;
+}
+#criticalAreasWrap.progress-critical-grid .collapse-body.open {
+    max-height: 440px;
+    padding: 0 16px 16px;
+}
+#criticalAreasWrap.progress-critical-grid .critical-chart-container {
+    height: 280px;
+    position: relative;
+    min-width: 0;
+}
+#criticalAreasWrap.progress-critical-grid .progress-average-note {
+    margin-top: 7px;
+    color: #777;
+    font-size: 11px;
+    line-height: 1.4;
+}
+@media (max-width: 760px) {
+    #criticalAreasWrap.progress-critical-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    #criticalAreasWrap.progress-critical-grid .critical-chart-container {
+        height: 260px;
+    }
+}
