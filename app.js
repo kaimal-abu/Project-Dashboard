@@ -228,155 +228,176 @@ function toggleDriveDropdown(contentId, btn) {
     }
 }
 
-/* ---------- Electrical status: same structure as the daily report ---------- */
-const electricalGroups = [
-  {key:'drive11', title:'11 kV Drives', table:'table-11kv', badge:'badge-11kv', kv:11},
-  {key:'drive33', title:'3.3 kV Drives', table:'table-33kv', badge:'badge-33kv', kv:3.3},
-  {key:'transformer', title:'Transformers', table:'table-tx', badge:'badge-tx'},
-  {key:'other', title:'Other Equipment', table:'table-other', badge:'badge-other'}
-];
-function electricalEscape(value) {
-  return String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ---------- Electrical: numbers-only stage matrices ---------- */
+function electricalText(value) {
+    return value === null || value === undefined ? '' : String(value).trim();
 }
+
 function electricalNumber(value) {
-  if(value===null || value===undefined || typeof value==='boolean' || String(value).trim()==='') return null;
-  const n=Number(String(value).replace(/,/g,''));
-  return Number.isFinite(n)?n:null;
+    if (typeof value === 'boolean') return null;
+    const text = electricalText(value).replace(/,/g, '');
+    if (!text) return null;
+    const parsed = Number(text);
+    return Number.isFinite(parsed) ? parsed : null;
 }
-function electricalQty(value) {
-  const n=electricalNumber(value);
-  if(n!==null) return Math.round(n);
-  const m=String(value ?? '').match(/\d[\d,]*(?:\.\d+)?/);
-  return m?Math.round(Number(m[0].replace(/,/g,''))):null;
+
+function electricalQuantity(value) {
+    const direct = electricalNumber(value);
+    if (direct !== null) return direct;
+    const match = electricalText(value).replace(/,/g, '').match(
+        /^(\d+(?:\.\d+)?)\s*(?:nos?\.?|numbers?|units?|pcs?\.?)$/i
+    );
+    return match ? Number(match[1]) : null;
 }
-function electricalFmt(value) {
-  return value===null || value===undefined ? '-' : Number(value).toLocaleString('en-IN',{maximumFractionDigits:1});
+
+function electricalEscape(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 }
-function electricalDates(value) {
-  const result=[];
-  const regex=/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/g;
-  let m;
-  while((m=regex.exec(String(value ?? '')))!==null) {
-    let y=Number(m[3]); if(y<100)y+=2000;
-    const month=Number(m[2]), day=Number(m[1]);
-    const d=new Date(y,month-1,day);
-    if(d.getFullYear()===y && d.getMonth()===month-1 && d.getDate()===day) result.push(d);
-  }
-  return result;
+
+function electricalColumnIndexes(headers) {
+    const normalized = headers.map(value => electricalText(value)
+        .toUpperCase().replace(/[^A-Z0-9]/g, ''));
+    const find = (...aliases) => {
+        for (const alias of aliases) {
+            const index = normalized.indexOf(alias);
+            if (index >= 0) return index;
+        }
+        return -1;
+    };
+    return {
+        name: find('MOTORID', 'EQUIPMENT', 'EQUIPMENTNAME'),
+        kv: find('VOLTAGELEVELKV', 'VOLTAGEKV', 'KV', 'VOLTAGE'),
+        qty: find('TOTAL', 'QTY', 'QUANTITY', 'TOTALQTY', 'TOTALQUANTITY'),
+        rating: find('NAMEPLATERATING', 'RATING'),
+        board: find('BOARDCHARGINGDATE', 'BOARDCHARGINGDATES', 'CHARGINGDATE'),
+        trial: find('MOTORTRIALDATES', 'MOTORTRIALDATE', 'TRIALDATE', 'TRIALDATES'),
+        foundation: find('FOUNDATIONCOMPLETED', 'FOUNDATION', 'FOUNDATIONDONE'),
+        erected: find('ERECTED', 'ERECTIONCOMPLETED', 'ERECTION'),
+        commissioned: find('COMMISSIONED', 'COMMISSIONINGCOMPLETED', 'COMMISSIONING'),
+    };
 }
-function electricalDateLabel(date) {
-  return date.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-}
-function parseElectricalStatus(rows,today) {
-  const hi=rows.findIndex(row=>row && row.some(v=>String(v ?? '').trim().toUpperCase()==='MOTOR ID'));
-  if(hi<0) throw new Error('Electrical sheet: MOTOR ID header not found');
-  const headers=rows[hi].map(v=>String(v ?? '').trim().toUpperCase());
-  const find=(...needles)=>headers.findIndex(h=>needles.some(n=>h.includes(n)));
-  const columns={name:find('MOTOR ID','EQUIPMENT'),qty:find('TOTAL'),rating:find('RATING'),kv:find('VOLTAGE'),board:find('BOARD'),trial:find('TRIAL'),foundation:find('FOUNDATION'),erected:find('ERECTED'),commissioned:find('COMMISSIONED')};
-  const get=(r,key)=>columns[key]<0?null:r[columns[key]];
-  const items=[], trials={};
-  for(const row of rows.slice(hi+1)) {
-    if(!row)continue;
-    const name=String(get(row,'name') ?? '').trim(); if(!name)continue;
-    const summary=name.match(/([\d.]+)\s*kv\s*drives/i);
-    if(summary) {
-      const m=String(get(row,'board') ?? '').match(/(\d+)\s*\/\s*(\d+)/);
-      if(m)trials[Number(summary[1])]=[Number(m[1]),Number(m[2])];
-      continue;
+
+function electricalStageState(item, stage) {
+    const done = item[stage];
+    const total = item.qty;
+    if (done === null || total === null) return {state: 'Missing', label: '-'};
+    let invalid = total <= 0 || done < 0 || done > total;
+    if (stage === 'erected' && item.foundation !== null) {
+        invalid = invalid || done > item.foundation;
     }
-    const kv=electricalNumber(get(row,'kv'));
-    const upper=name.toUpperCase();
-    const group=kv===11?'drive11':kv===3.3?'drive33':(['GT','UAT','UT','ST'].includes(upper)||upper.includes('TRANSFORMER'))?'transformer':'other';
-    const item={name,group,kv,qty:electricalQty(get(row,'qty')),rating:String(get(row,'rating') ?? '').trim(),board:String(get(row,'board') ?? '').trim(),trial:String(get(row,'trial') ?? '').trim(),problems:[]};
-    for(const key of ['foundation','erected','commissioned']) item[key]=electricalNumber(get(row,key));
-    item.boardDates=electricalDates(item.board); item.trialDates=electricalDates(item.trial);
-    item.charged=/charged/i.test(item.board) && item.boardDates.length===0;
-    item.hasData=['foundation','erected','commissioned'].some(key=>item[key]!==null);
-    const excessive=['foundation','erected','commissioned'].filter(key=>item[key]!==null && item.qty!==null && item[key]>item.qty);
-    if(excessive.length)item.problems.push(excessive.join('/')+' exceeds total '+item.qty);
-    if(item.foundation!==null && item.erected!==null && item.erected>item.foundation)item.problems.push('erected exceeds foundation');
-    if(item.erected!==null && item.commissioned!==null && item.commissioned>item.erected)item.problems.push('commissioned exceeds erected');
-    items.push(item);
-  }
-  for(const item of items) {
-    if(trials[item.kv] && trials[item.kv][0]===0 && item.commissioned>0)item.problems.push('Commissioned quantity entered while group trials are 0');
-  }
-  const groups={};
-  for(const definition of electricalGroups) {
-    const members=items.filter(i=>i.group===definition.key);
-    const group={...definition,items:members,qty:members.reduce((s,i)=>s+(i.qty??0),0),trials:trials[definition.kv]??null};
-    for(const key of ['foundation','erected','commissioned'])group[key]=members.reduce((s,i)=>s+(i[key]??0),0);
-    groups[definition.key]=group;
-  }
-  const targets=[];
-  for(const item of items.filter(i=>i.kv===11 || i.kv===3.3)) {
-    const candidates=[];
-    if(!item.charged && item.boardDates.length)candidates.push(['Board charging',item.boardDates[item.boardDates.length-1]]);
-    if(item.trialDates.length)candidates.push(['Motor trial',item.trialDates[item.trialDates.length-1]]);
-    for(const [milestone,date] of candidates)if(date.getFullYear()===today.getFullYear() && date.getMonth()===today.getMonth())targets.push({name:item.name,milestone,date});
-  }
-  targets.sort((a,b)=>a.date-b.date || a.name.localeCompare(b.name) || a.milestone.localeCompare(b.milestone));
-  return {groups,items,targets};
+    if (stage === 'commissioned' && item.erected !== null) {
+        invalid = invalid || done > item.erected;
+    }
+    const state = invalid ? 'Check'
+        : Math.abs(done - total) < 1e-9 ? 'Complete'
+        : done === 0 ? 'Pending' : 'Partial';
+    return {state, label: `${done}/${total}`};
 }
-function electricalBar(item) {
-  if(!item.qty || !item.hasData)return '<div class="electrical-stage electrical-stage-empty">No stage data</div>';
-  const clip=v=>Math.min(Math.max(v??0,0),item.qty);
-  const c=clip(item.commissioned),e=clip(item.erected),f=clip(item.foundation);
-  const a=c,b=Math.max(e-c,0),d=Math.max(f-Math.max(e,c),0),p=Math.max(item.qty-a-b-d,0);
-  const segments=[['commissioned',a,'Commissioned'],['erected',b,'Erected, not commissioned'],['foundation',d,'Foundation done, not erected'],['pending',p,'Foundation pending']];
-  const labels=segments.filter(([,q])=>q>0).map(([,q,title])=>title+': '+electricalFmt(q)).join('; ');
-  return `<div class="electrical-stage${item.problems?.length?' electrical-stage-flag':''}" role="img" aria-label="${electricalEscape(labels)}">`+
-    segments.filter(([,q])=>q>0).map(([key,q,title])=>`<span class="electrical-seg electrical-${key}" style="width:${(q/item.qty*100).toFixed(3)}%" title="${title}: ${electricalFmt(q)}"></span>`).join('')+'</div>';
+
+function electricalMatrixHtml(items, title) {
+    const completeTotal = items.every(item => item.qty !== null);
+    const total = completeTotal ? items.reduce((sum, item) => sum + item.qty, 0) : '-';
+    let html = `<div class="electrical-matrix-title">${electricalEscape(title)} - Total: ${total}</div>
+        <table class="electrical-table"><thead><tr>
+        <th>Equipment</th><th>Qty</th><th>Foundation</th><th>Erected</th><th>Commissioned</th>
+        </tr></thead><tbody>`;
+    if (!items.length) html += '<tr><td colspan="5">No equipment entered</td></tr>';
+    items.forEach(item => {
+        const cells = ['foundation', 'erected', 'commissioned'].map(stage => {
+            const cell = electricalStageState(item, stage);
+            return `<td class="stage-${cell.state.toLowerCase()}">${electricalEscape(cell.label)}</td>`;
+        });
+        html += `<tr><td class="equipment-name">${electricalEscape(item.name)}</td>
+            <td>${item.qty ?? '-'}</td>${cells.join('')}</tr>`;
+    });
+    return html + '</tbody></table>';
 }
-function electricalStageRow(item) {
-  const suffix=item.qty===null?'?':electricalFmt(item.qty);
-  const warning=item.problems.length?' (!)':'';
-  const title=item.problems.length?' title="'+electricalEscape(item.problems.join('; '))+'"':'';
-  const counts=item.hasData?`F${electricalFmt(item.foundation)} E${electricalFmt(item.erected)} C${electricalFmt(item.commissioned)}`:'No stage data';
-  return `<div class="electrical-stage-row"><div class="electrical-label">${electricalEscape(item.name)} (${suffix})</div>${electricalBar(item)}<div class="electrical-counts${warning?' electrical-data-flag':''}"${title}>${counts}${warning}</div></div>`;
-}
-function renderElectricalStatus(data,today) {
-  const summary=document.getElementById('electricalSummary');
-  const tile=(key)=>{
-    const group=data.groups[key];
-    const line=(label,field)=>`${label}: <strong>${electricalFmt(group[field])} / ${electricalFmt(group.qty)}</strong> (${group.qty?Math.round(group[field]/group.qty*100):0}%)`;
-    return `<div class="electrical-tile electrical-tile-${key}"><h3>${group.title}</h3><div>${line('Foundation','foundation')}</div><div>${line('Erected','erected')}</div><div>${line('Commissioned','commissioned')}</div>${group.trials?`<div>Motor trials done: <strong>${group.trials[0]} / ${group.trials[1]}</strong></div>`:''}</div>`;
-  };
-  if(summary)summary.innerHTML=['drive11','drive33','transformer'].map(tile).join('');
-  const stages=document.getElementById('electricalStages');
-  const section=(key)=>{
-    const g=data.groups[key];
-    return `<section class="electrical-stage-group"><h4>${g.title} (${g.qty})${g.trials?` - trials ${g.trials[0]}/${g.trials[1]}`:''}</h4>${g.items.map(electricalStageRow).join('')||'<div class="electrical-empty">No items found</div>'}</section>`;
-  };
-  if(stages)stages.innerHTML=`<div class="electrical-panel"><h3>Drives</h3>${section('drive11')}${section('drive33')}</div><div class="electrical-panel"><h3>Transformers and other equipment</h3>${section('transformer')}${section('other')}</div>`;
-  const legend=document.getElementById('electricalLegend');
-  if(legend)legend.innerHTML=[['commissioned','Commissioned'],['erected','Erected, not commissioned'],['foundation','Foundation done, not erected'],['pending','Foundation pending']].map(([key,label])=>`<span><i class="electrical-${key}"></i>${label}</span>`).join('')+'<span>F / E / C = foundation / erected / commissioned (nos); (!) = check data</span>';
-  const targets=document.getElementById('electricalTargets');
-  if(targets) {
-    const month=today.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-    targets.innerHTML=`<h3>Drive Targets - ${month}</h3>`+(data.targets.length?`<table class="drive-table"><thead><tr><th>Drive</th><th>Milestone</th><th>Target date</th></tr></thead><tbody>${data.targets.map(t=>`<tr><td>${electricalEscape(t.name)}</td><td>${t.milestone}</td><td>${electricalDateLabel(t.date)}</td></tr>`).join('')}</tbody></table>`:`<div class="electrical-empty">No drive board-charging or motor-trial targets fall in ${month}.</div>`);
-  }
-  for(const def of electricalGroups) {
-    const g=data.groups[def.key],badge=document.getElementById(def.badge),table=document.getElementById(def.table);
-    if(badge)badge.textContent=`Erected ${electricalFmt(g.erected)}/${electricalFmt(g.qty)} | Commissioned ${electricalFmt(g.commissioned)}`;
-    if(!table)continue;
-    const tbody=table.querySelector('tbody'); if(!tbody)continue;
-    tbody.innerHTML=g.items.map(i=>`<tr><td><strong>${electricalEscape(i.name)}</strong></td><td>${electricalFmt(i.qty)}</td><td>${electricalEscape(i.rating)||'-'}</td><td>${electricalFmt(i.foundation)}</td><td>${electricalFmt(i.erected)}</td><td>${electricalFmt(i.commissioned)}</td></tr>`).join('')||'<tr><td colspan="6">No items found</td></tr>';
-  }
-}
+
 function loadElectrical(workbook) {
-  try {
-    const sheet=workbook.Sheets['Electrical'];
-    if(!sheet)throw new Error('Electrical sheet not found');
-    const today=new Date();today.setHours(0,0,0,0);
-    const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:null});
-    renderElectricalStatus(parseElectricalStatus(rows,today),today);
-  } catch(error) {
-    console.error('Electrical status:',error);
-    const summary=document.getElementById('electricalSummary');
-    if(summary)summary.innerHTML=`<div class="electrical-error">Electrical status unavailable: ${electricalEscape(error.message)}</div>`;
-    for(const id of ['electricalStages','electricalLegend','electricalTargets']){const el=document.getElementById(id);if(el)el.innerHTML='';}
-  }
+    const tileIds = ['tile-11kv', 'tile-33kv', 'tile-transformer'];
+    try {
+        const sheet = workbook.Sheets['Electrical'];
+        if (!sheet) throw new Error('Electrical sheet not found');
+        const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: null});
+        const headerIndex = rows.findIndex(row => row && row.some(
+            value => electricalText(value).toUpperCase() === 'MOTOR ID'
+        ));
+        if (headerIndex < 0) throw new Error('MOTOR ID header not found');
+        const columns = electricalColumnIndexes(rows[headerIndex]);
+        const required = ['name', 'qty', 'kv', 'foundation', 'erected', 'commissioned'];
+        const missing = required.filter(key => columns[key] < 0);
+        if (missing.length) throw new Error('Unrecognised columns: ' + missing.join(', '));
+        const valueAt = (row, key) => columns[key] >= 0 ? row[columns[key]] : null;
+        const groups = {
+            drive_11: {title: '11 kV Drives', items: []},
+            drive_33: {title: '3.3 kV Drives', items: []},
+            transformer: {title: 'Transformers', items: []},
+            equipment: {title: 'Other Equipment', items: []},
+        };
+        const transformerIds = new Set(['GT', 'UAT', 'UT', 'ST']);
+        const trialSummary = {};
+        rows.slice(headerIndex + 1).forEach(row => {
+            const name = electricalText(valueAt(row, 'name'));
+            if (!name) return;
+            const summary = name.match(/([\d.]+)\s*kv\s*drives/i);
+            if (summary) {
+                const counts = electricalText(valueAt(row, 'board')).match(/(\d+)\s*\/\s*(\d+)/);
+                if (counts) trialSummary[Number(summary[1])] = [Number(counts[1]), Number(counts[2])];
+                return;
+            }
+            const kv = electricalNumber(valueAt(row, 'kv'));
+            const key = name.toUpperCase();
+            const category = kv === 11 ? 'drive_11' : kv === 3.3 ? 'drive_33'
+                : transformerIds.has(key) || key.includes('TRANSFORMER') ? 'transformer'
+                : 'equipment';
+            groups[category].items.push({
+                name, kv, category,
+                qty: electricalQuantity(valueAt(row, 'qty')),
+                foundation: electricalNumber(valueAt(row, 'foundation')),
+                erected: electricalNumber(valueAt(row, 'erected')),
+                commissioned: electricalNumber(valueAt(row, 'commissioned')),
+            });
+        });
+        const tileSummary = category => {
+            const members = groups[category].items;
+            const total = members.every(item => item.qty !== null)
+                ? members.reduce((sum, item) => sum + item.qty, 0) : null;
+            const lines = ['foundation', 'erected', 'commissioned'].map(stage => {
+                const done = members.every(item => item[stage] !== null)
+                    ? members.reduce((sum, item) => sum + item[stage], 0) : null;
+                const pct = done !== null && total > 0 ? ` (${Math.round(done / total * 100)}%)` : '';
+                const title = stage[0].toUpperCase() + stage.slice(1);
+                return `${title}: ${done ?? '-'} / ${total ?? '-'}${pct}`;
+            });
+            const kv = category === 'drive_11' ? 11 : category === 'drive_33' ? 3.3 : null;
+            const trials = trialSummary[kv];
+            if (trials) lines.push(`Motor trials done: ${trials[0]} / ${trials[1]}`);
+            return lines.join('<br>');
+        };
+        ['drive_11', 'drive_33', 'transformer'].forEach((key, index) => {
+            const tile = document.getElementById(tileIds[index]);
+            if (tile) tile.querySelector('.electrical-tile-body').innerHTML = tileSummary(key);
+        });
+        document.getElementById('matrix-drives').innerHTML =
+            electricalMatrixHtml(groups.drive_11.items, groups.drive_11.title) +
+            electricalMatrixHtml(groups.drive_33.items, groups.drive_33.title);
+        document.getElementById('matrix-transformers').innerHTML =
+            electricalMatrixHtml(groups.transformer.items, groups.transformer.title) +
+            electricalMatrixHtml(groups.equipment.items, groups.equipment.title);
+    } catch (error) {
+        console.error('Electrical dashboard:', error);
+        tileIds.forEach(id => {
+            const tile = document.getElementById(id);
+            if (tile) tile.querySelector('.electrical-tile-body').textContent = error.message;
+        });
+        ['matrix-drives', 'matrix-transformers'].forEach(id => {
+            const container = document.getElementById(id);
+            if (container) container.textContent = 'Electrical data could not be displayed: ' + error.message;
+        });
+    }
 }
 
 /* ---------- Milestones ---------- */
