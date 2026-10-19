@@ -1456,3 +1456,50 @@ canvas {
         height: 260px;
     }
 }
+
+
+/* Electrical status: scoped styles; other dashboard components preserved. */
+.electrical-status-section { box-sizing: border-box; }
+.electrical-summary-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:14px 0 22px; }
+.electrical-tile { background:#f4f7fb; border:1px solid #e1e8f0; border-radius:10px; overflow:hidden; padding-bottom:10px; color:#555; font-size:13px; line-height:1.55; }
+.electrical-tile h3 { background:#0078D4; color:white; margin:0 0 8px; padding:8px 12px; text-align:center; font-size:14px; }
+.electrical-tile-drive33 h3 { background:#00897b; }
+.electrical-tile-transformer h3 { background:#ff6600; }
+.electrical-tile > div { padding:3px 12px; }
+.electrical-stage-panels { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; }
+.electrical-panel { min-width:0; }
+.electrical-panel > h3 { color:#005a9c; margin:0 0 15px; font-size:16px; }
+.electrical-stage-group h4 { color:#005a9c; margin:16px 0 10px; font-size:12px; }
+.electrical-stage-row { display:grid; grid-template-columns:minmax(100px,1.2fr) minmax(100px,2fr) minmax(100px,1fr); align-items:center; gap:7px; margin:9px 0; font-size:11px; }
+.electrical-label { text-align:right; overflow-wrap:anywhere; }
+.electrical-counts { color:#555; font-size:10px; white-space:normal; }
+.electrical-data-flag { color:#b00020; font-weight:600; }
+.electrical-stage { height:18px; background:#d9d9d9; display:flex; border-radius:2px; overflow:hidden; min-width:0; }
+.electrical-stage-flag { outline:1px solid #d93025; }
+.electrical-seg { display:block; height:100%; }
+.electrical-commissioned { background:#28a745; }
+.electrical-erected { background:#0078D4; }
+.electrical-foundation { background:#ffc107; }
+.electrical-pending { background:#d9d9d9; }
+.electrical-stage-empty { background:repeating-linear-gradient(45deg,#f4f4f4,#f4f4f4 4px,#dedede 4px,#dedede 5px); color:#777; font-size:10px; justify-content:center; align-items:center; }
+.electrical-legend { display:flex; flex-wrap:wrap; gap:8px 18px; border-top:1px solid #eee; margin:20px 0 18px; padding-top:12px; font-size:11px; color:#666; }
+.electrical-legend span { display:inline-flex; align-items:center; gap:5px; }
+.electrical-legend i { display:inline-block; width:12px; height:10px; }
+.electrical-targets { margin:12px 0 18px; overflow-x:auto; }
+.electrical-targets h3 { font-size:16px; color:#005a9c; margin:0 0 10px; }
+.electrical-targets .drive-table th { text-align:left; }
+.electrical-targets .drive-table td { font-size:12px; }
+.electrical-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 18px; }
+.electrical-detail-grid .drive-section { margin-top:0; min-width:0; }
+.electrical-detail-grid .drive-btn { flex-wrap:wrap; gap:5px; }
+.electrical-detail-grid .drive-summary { margin-left:auto; }
+.electrical-error { background:#fdecea; color:#a8231b; padding:12px; border-radius:8px; }
+.electrical-empty { font-size:12px; color:#777; padding:8px 0; }
+@media(max-width:1050px) {
+    .electrical-stage-panels { grid-template-columns:minmax(0,1fr); }
+}
+@media(max-width:700px) {
+    .electrical-summary-grid, .electrical-detail-grid { grid-template-columns:minmax(0,1fr); }
+    .electrical-stage-row { grid-template-columns:minmax(80px,1fr) minmax(90px,1.6fr) minmax(70px,0.9fr); gap:5px; }
+    .electrical-counts { font-size:9px; }
+}

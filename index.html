@@ -11,7 +11,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="style.css?v=progress-ma-20261017">
+    <link rel="stylesheet" href="style.css?v=electrical-20261019-v2">
 </head>
 <body>
 
@@ -217,9 +217,8 @@
         </div>
     </div>
 
-    <!-- Row: Manpower & Electrical -->
-    <div class="split-row-50">
-        <div class="half-col">
+    <!-- Manpower: existing table retained -->
+    <div class="section">
             <h2>Manpower Deployment Status as on <span id="manpowerAsOnDate"></span></h2>
             <table id="manpowerTable">
                 <thead>
@@ -229,41 +228,56 @@
             </table>
         </div>
 
-        <div class="half-col">
-            <h2>Electrical Status</h2>
-            <div class="drive-section">
-                <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-11kv', this)">
-                    <span>⚡ 11 KV Drives</span>
-                    <span class="drive-summary" id="badge-11kv">Loading...</span>
-                    <span class="drive-chevron">&#9662;</span>
-                </button>
-                <div class="drive-content" id="content-11kv">
-                    <table class="drive-table" id="table-11kv">
-                        <thead>
-                            <tr><th>S.No</th><th>Motor ID</th><th>Rating</th><th>Charging Date</th><th>Trial Date</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="drive-section">
-                <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-33kv', this)">
-                    <span>⚡ 3.3 KV Drives</span>
-                    <span class="drive-summary" id="badge-33kv">Loading...</span>
-                    <span class="drive-chevron">&#9662;</span>
-                </button>
-                <div class="drive-content" id="content-33kv">
-                    <table class="drive-table" id="table-33kv">
-                        <thead>
-                            <tr><th>S.No</th><th>Motor ID</th><th>Rating</th><th>Charging Date</th><th>Trial Date</th></tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+    <!-- Electrical status aligned with the daily report -->
+    <section class="section electrical-status-section" id="electricalStatusSection">
+        <h2>Electrical Status - Drives and Transformers</h2>
+        <div class="electrical-summary-grid" id="electricalSummary" aria-live="polite">Loading electrical status...</div>
+        <div class="electrical-stage-panels" id="electricalStages"></div>
+        <div class="electrical-legend" id="electricalLegend"></div>
+        <div class="electrical-targets" id="electricalTargets"></div>
+        <div class="electrical-detail-grid">
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-11kv', this)">
+                <span>11 kV Drives - details</span><span class="drive-summary" id="badge-11kv">Loading...</span><span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-11kv">
+                <table class="drive-table" id="table-11kv">
+                    <thead><tr><th>Equipment</th><th>Qty</th><th>Rating</th><th>Foundation</th><th>Erected</th><th>Commissioned</th></tr></thead><tbody></tbody>
+                </table>
             </div>
         </div>
-    </div>
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-33kv', this)">
+                <span>3.3 kV Drives - details</span><span class="drive-summary" id="badge-33kv">Loading...</span><span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-33kv">
+                <table class="drive-table" id="table-33kv">
+                    <thead><tr><th>Equipment</th><th>Qty</th><th>Rating</th><th>Foundation</th><th>Erected</th><th>Commissioned</th></tr></thead><tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-tx', this)">
+                <span>Transformers - details</span><span class="drive-summary" id="badge-tx">Loading...</span><span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-tx">
+                <table class="drive-table" id="table-tx">
+                    <thead><tr><th>Equipment</th><th>Qty</th><th>Rating</th><th>Foundation</th><th>Erected</th><th>Commissioned</th></tr></thead><tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="drive-section">
+            <button type="button" class="drive-btn" onclick="toggleDriveDropdown('content-other', this)">
+                <span>Other Equipment - details</span><span class="drive-summary" id="badge-other">Loading...</span><span class="drive-chevron">&#9662;</span>
+            </button>
+            <div class="drive-content" id="content-other">
+                <table class="drive-table" id="table-other">
+                    <thead><tr><th>Equipment</th><th>Qty</th><th>Rating</th><th>Foundation</th><th>Erected</th><th>Commissioned</th></tr></thead><tbody></tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    </section>
 
     <!-- Row: Civil Foundations & Calendar -->
     <div class="split-row-50">
@@ -371,6 +385,6 @@
 
 
     <!-- Custom Script File -->
-    <script src="app.js?v=progress-ma-20261017"></script>
+    <script src="app.js?v=electrical-20261019-v2"></script>
 </body>
 </html>
